@@ -36,7 +36,7 @@ end
 % Results:
 % 1 XPs: [0 0 1]
 % 2 XPs: [0 1 0]
-% 3 XPs: 
+% 3 XPs: [0 1 0]
 
 %% Do Bayesian inference with cbm hbi%%
 
