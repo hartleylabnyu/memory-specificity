@@ -16,10 +16,10 @@ end
 %% Export non-hierarchical fits 
 
 %load fit model data
-load('cbm_lap_output/lap_fourB_oneQ')
+load('cbm_lap_output/lap_fourB_oneQ_lapse')
 
 % param names
-param_names = {'beta_c_cCond', 'beta_e_cCond', 'beta_c_eCond', 'beta_e_eCond', 'alpha', 'q_init'};
+param_names = {'beta_c_cCond', 'beta_e_cCond', 'beta_c_eCond', 'beta_e_eCond', 'alpha', 'q_init', 'lapse'};
 
 %get params
 params = cbm.output.parameters;
@@ -32,4 +32,4 @@ for column = 1:length(param_names)
 end
 
 %save as csv
-csvwrite_with_headers('../../data/model_estimates/params_fourB_oneQ.csv', [sub_list', params], headers);
+csvwrite_with_headers('../../data/model_estimates/params_fourB_oneQ_lapse.csv', [sub_list', params], headers);

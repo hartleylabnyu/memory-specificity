@@ -1,0 +1,326 @@
+---
+title: 'Memory Specificity: Experiment 2 Posterior Predictive Checks'
+author: "Kate Nussenbaum"
+date: "6/13/24"
+output: 
+  html_document:
+    df_print: paged
+    theme: flatly
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+---
+
+```{=html}
+<style type="text/css">
+h1.title {
+font-size: 38px;
+}
+h1 { /* Header 1 */
+font-size: 28px;
+}
+h2 { /* Header 2 */
+font-size: 22px;
+}
+h3 { /* Header 3 */
+font-size: 18px;
+}
+
+</style>
+```
+
+------------------------------------------------------------------------
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = T, cache.lazy = F)
+knitr::opts_chunk$set(fig.path = "figures/simulated_data/")
+knitr::opts_chunk$set(fig.height = 4.5, fig.width = 6, dpi = 600)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+```{r load needed libraries}
+library(tidyverse)
+library(glue)
+library(ggpubr)
+library(pander)
+```
+
+```{r define functions}
+scale_this <- function(x){
+  (x - mean(x, na.rm=TRUE)) / sd(x, na.rm=TRUE)
+}
+
+se <- function(x){
+    sd(x, na.rm = T)/sqrt(length(x))
+}
+```
+
+```{r plot theme}
+
+#define colors to use for plots
+color4 =  "#d94f70"
+color5 = "#f88f58"
+color3 = "#45b5aa"
+color1 = "#FFCA4B"
+color2 = "#6364a5"
+
+#define plotting theme
+mem_theme <- theme(panel.background = element_rect(fill='transparent'),
+                   axis.line = element_line(color='black'),
+                   panel.border = element_rect(color = 'black', fill = "transparent"),
+                   panel.grid.minor = element_line(color='transparent'),
+                   axis.title.x = element_text(size=14, vjust=-.25),
+                   axis.title.y = element_text(size=14, vjust=1),
+                   axis.text.x = element_text(size=10, colour="black"),
+                   axis.text.y = element_text(size=10, colour="black"),
+                   legend.text=element_text(size=12),
+                   legend.title = element_text(size = 14),
+                   plot.title = element_text(size=16, face = "bold", hjust = .5), 
+                   strip.text.x = element_text(size=12), 
+                   strip.text.y = element_text(size=12), 
+                   strip.background = element_rect(colour= "black", fill = "transparent"))
+```
+
+# Import and process data 
+```{r import age data}
+
+#read in subject ages
+sub_ages <- read_csv(glue('data/e2_sub_ages.csv')) 
+
+#create list of all included subjects with subject ids, age, age group
+subject_list <- sub_ages %>%
+    mutate(age = as.numeric(age)) %>%
+    mutate(age_group = case_when(age < 13 ~ "Children",
+                                 age >= 13 & age < 18 ~ "Adolescents",
+                                 age >= 18 ~ "Adults")) %>%
+    mutate(age_group = factor(age_group, levels = c("Children", "Adolescents", "Adults")))
+```
+
+
+
+```{r import and format empirical learning data}
+
+learning_data <- read_csv('data/e2_learning_data.csv') %>%
+    mutate(reward_condition = as.factor(case_when(block_condition == 1 ~ "Category-Predictive",
+                                        block_condition == 2 ~ "Exemplar-Predictive"))) %>%
+    group_by(subject_id, task_block, stimulus) %>% 
+    mutate(stimulus_repetition = rank(learning_trial)) %>%
+    ungroup() %>%
+    mutate(correct_response_made = optimal_choice) %>%
+    ungroup() %>%
+    group_by(subject_id, reward_condition) %>%
+    mutate(within_condition_block_num = as.numeric(factor(rank(block_order)))) %>%
+    ungroup() %>%
+    mutate(choice = parse_number(option_selected)) %>%
+    select(subject_id, block_order, within_condition_block_num, stimulus, learning_trial, reward_condition, stimulus_repetition, correct_response_made, choice) 
+
+# add age
+learning_data <- full_join(learning_data, subject_list, by = c('subject_id'))
+
+#factor subject id
+learning_data$subject_id <- factor(learning_data$subject_id)
+```
+
+```{r read in simulated data}
+
+sim_data_folder = "data/sim_data/"
+
+#Read in RL simulations - fourB_oneQ
+data_files <- list.files(path = sim_data_folder, pattern = "fourB_oneQ_CF_sub")
+
+sim_data <- data.frame()
+for (i in c(1:length(data_files))) {
+    sim_sub_data <- read_csv(glue("{sim_data_folder}/{data_files[i]}"), show_col_types = F) %>%
+        mutate(model = "fourB_oneQ_CF")
+    sim_data <- rbind(sim_data, sim_sub_data)
+}
+
+sim_data$subject_id <- factor(sim_data$subject_id)
+
+```
+
+```{r combine simulated and real data}
+
+#combine simulated data with real data
+temp <- inner_join(learning_data, sim_data, by = c("subject_id", "block_order", "learning_trial"))  %>%
+    mutate(correct_response_made = case_when(sim_choice == optimal_choice  ~ 1,
+                                             sim_choice != optimal_choice ~ 0)) 
+
+#add model to empirical data
+empirical_data <- learning_data %>%
+    mutate(model = "empirical") 
+
+#combine simulated and empirical data
+sim_learning_data <- bind_rows(temp, empirical_data)
+
+#factor model and reorder levels
+sim_learning_data$model <- factor(sim_learning_data$model, levels = c("empirical", "fourB_oneQ_CF"))
+
+```
+
+
+# Simulated learning
+
+## Plot: Optimal responses across age groups and reward conditions
+```{r plot optimal responses by age group and reward condition}
+
+# Plot correct response as a function of reward condition and stimulus repetition 
+correct_response_summary_sub <- sim_learning_data %>%
+    group_by(reward_condition, stimulus_repetition, subject_id, age_group, model) %>%
+    summarize(mean_correct = mean(correct_response_made, na.rm = T))
+
+correct_response_summary <- correct_response_summary_sub  %>%
+    group_by(reward_condition, stimulus_repetition, age_group, model) %>%
+    summarize(group_mean_correct = mean(mean_correct, na.rm = T),
+              se_correct = se(mean_correct))
+
+#group means
+correct_response_plot <- ggplot(correct_response_summary, 
+                                    aes(x = stimulus_repetition, 
+                                        color = reward_condition,
+                                        y = group_mean_correct)) +
+    facet_grid(cols = vars(age_group), rows = vars(model)) +
+    geom_point() +
+    geom_line() +
+    geom_errorbar(aes(ymin = group_mean_correct - se_correct, ymax = group_mean_correct + se_correct), 
+                  width = .1) + 
+    xlab("Stimulus Repetition") +
+    ylab("Proportion of Correct Responses") +
+    scale_color_manual(values = c(color1, color2),
+                       name = "Block Condition") +
+    geom_hline(yintercept = .33, linetype = "dashed") +
+    scale_y_continuous(limits = c(.2, 1), breaks = c(.3, .5, .7, .9)) +
+    mem_theme  +
+    theme(legend.position = "top")
+correct_response_plot
+```
+
+
+## Plot: Generalization (response to first appearance of each stimulus) by age group and reward condition 
+```{r generalization data processing}
+
+# add category to learning data frame
+sim_learning_data <- sim_learning_data %>%
+    separate(stimulus,
+             into = c(NA, "image"),
+             sep = "/") %>%
+    mutate(stim_num = parse_number(image)) %>%
+    separate(image,
+             into = c("category", NA),
+             sep = "([123456])",
+             remove=FALSE)
+
+# determine category repetition number
+sim_learning_data <- sim_learning_data %>%
+    group_by(subject_id, block_order, category, age_group, model) %>%
+    mutate(category_rep = rank(learning_trial))
+
+# determine correct responses as a function of stimulus rep and category rep
+correct_response_category_rep <- sim_learning_data %>%
+    mutate(category_rep_recoded = case_when(category_rep < 7 ~ category_rep,
+                                            category_rep > 7 ~ 8)) %>%
+    group_by(reward_condition, stimulus_repetition, category_rep_recoded, age_group, model) %>%
+    summarize(group_mean_correct = mean(correct_response_made, na.rm = T),
+              se_correct = se(correct_response_made),
+              N = n())  %>%
+    filter(stimulus_repetition == 1) %>%
+    drop_na()
+
+#plot
+correct_response_category_rep_plot <- ggplot(correct_response_category_rep, 
+                                aes(x = category_rep_recoded,
+                                    color = reward_condition,
+                                    y = group_mean_correct)) +
+    facet_grid(cols = vars(age_group), rows = vars(model)) +
+    geom_point() +
+    geom_line(aes(group = reward_condition)) +
+    geom_errorbar(aes(ymin = group_mean_correct - se_correct, ymax = group_mean_correct + se_correct), 
+                  width = .1) + 
+    xlab("Category Repetition") +
+    ylab("Correct Responses to 1st Stim.") +
+    scale_color_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
+    geom_hline(yintercept = .33, linetype = "dashed") +
+    mem_theme +
+    scale_x_continuous(breaks = c(2, 4, 6, 8),
+                       labels = c("2", "4", "6", "8+")
+                       ) +
+    theme(legend.position = "top")
+correct_response_category_rep_plot
+```
+
+## Plot: Category WSLS across age groups and reward conditions
+
+```{r category win stay lose shift data processing}
+
+#first determine prior response and prior reward to previous category appearance
+temp2 <- sim_learning_data %>% 
+    filter(model != "empirical") %>%
+    group_by(subject_id, block_order, category, model) %>%
+    mutate(prior_cat_stim = lag(image), #previous stimulus
+           prior_cat_response = lag(sim_choice), #previous response
+           prior_cat_correct_response_made = lag(correct_response_made), #previous outcome (win or lose) 
+           category_stay = case_when(prior_cat_response == sim_choice ~ 1,
+                                prior_cat_response != sim_choice ~ 0),
+           same_stim = case_when(image == prior_cat_stim ~ 1,
+                                 image != prior_cat_stim ~ 0)) %>%
+    ungroup() %>%
+        mutate(WSLS = case_when(prior_cat_correct_response_made == 1 & category_stay == 1 ~ 1, 
+                            prior_cat_correct_response_made == 1 & category_stay == 0 ~ 0,
+                            prior_cat_correct_response_made == 0 & category_stay == 1 ~ 0, 
+                            prior_cat_correct_response_made == 0 & category_stay == 0 ~ 1))
+
+temp3 <- sim_learning_data %>% 
+    filter(model == "empirical") %>%
+    group_by(subject_id, block_order, category, model) %>%
+    mutate(prior_cat_stim = lag(image), #previous stimulus
+           prior_cat_response = lag(choice), #previous response
+           prior_cat_correct_response_made = lag(correct_response_made), #previous outcome (win or lose) 
+           category_stay = case_when(prior_cat_response == choice ~ 1,
+                                prior_cat_response != choice ~ 0),
+           same_stim = case_when(image == prior_cat_stim ~ 1,
+                                 image != prior_cat_stim ~ 0)) %>%
+    ungroup() %>%
+        mutate(WSLS = case_when(prior_cat_correct_response_made == 1 & category_stay == 1 ~ 1, 
+                            prior_cat_correct_response_made == 1 & category_stay == 0 ~ 0,
+                            prior_cat_correct_response_made == 0 & category_stay == 1 ~ 0, 
+                            prior_cat_correct_response_made == 0 & category_stay == 0 ~ 1))
+
+sim_wsls_data <- rbind(temp2, temp3)
+
+```
+
+```{r plot wsls by age group and reward condition}
+
+#determine win-stay lose shift behavior across age group and blocks
+win_stay_lose_shift_sub_means <- sim_wsls_data %>%
+    filter(same_stim == 0) %>% #different stim only
+    mutate(trial_group = floor(learning_trial/12 + 71/72)) %>%
+    group_by(trial_group, subject_id, age, age_group, reward_condition, model) %>%
+    summarize(mean_sub_WSLS = mean(WSLS, na.rm = T),
+              se_sub_WSLS = se(WSLS)) %>%
+    drop_na()
+
+
+#plot
+WSLS_plot <- ggplot(win_stay_lose_shift_sub_means, aes(x = trial_group, y = mean_sub_WSLS, fill = reward_condition)) +
+    facet_grid(cols = vars(age_group), rows = vars(model)) +
+    geom_boxplot(data = filter(win_stay_lose_shift_sub_means, trial_group == 1)) + 
+    geom_boxplot(data = filter(win_stay_lose_shift_sub_means, trial_group == 2)) +
+    geom_boxplot(data = filter(win_stay_lose_shift_sub_means, trial_group == 3)) +
+    geom_boxplot(data = filter(win_stay_lose_shift_sub_means, trial_group == 4)) + 
+    geom_boxplot(data = filter(win_stay_lose_shift_sub_means, trial_group == 5)) +
+    geom_boxplot(data = filter(win_stay_lose_shift_sub_means, trial_group == 6)) +
+    scale_fill_manual(values = c(color1, color2),
+                      name = "Block Condition") + 
+    scale_color_manual(values = c(color1, color2),
+                      name = "Block Condition") + 
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    xlab("Trial Group (10 trials)") +
+    ylab("Category WSLS") +
+    scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6), labels = c(1,2,3, 4, 5, 6)) +
+    coord_cartesian(ylim = c(.3, 1)) +
+    mem_theme +
+    theme(legend.position = "top")
+WSLS_plot 
+```

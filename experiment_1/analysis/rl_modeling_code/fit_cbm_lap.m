@@ -1,7 +1,7 @@
 %% Fit models to memory specificity choice data using CBM %%
 % Experiment 1 Version
 % Kate Nussenbaum - katenuss@nyu.edu
-% Last edited: 11/13/23
+% Last edited: 5/28/24
 
 % clear everything
 clear;
@@ -12,7 +12,7 @@ addpath(genpath('lik_funs'));
 
 % format data into mat? (1 if reading from csv, 0 if 'all_data.mat' exists
 % already)
-format_data = 0;
+format_data = 1;
 
 %% Put data in correct format (or load if already formatted) %%
 if (format_data == 1)
@@ -44,6 +44,7 @@ if (format_data == 1)
         all_data{sub}.choice = sub_data.choice;
         all_data{sub}.points = sub_data.reward;
         all_data{sub}.sub_id = subject;
+        all_data{sub}.block_order = sub_data.block_order;
     end
     save('all_data', 'all_data');
 else

@@ -1,7 +1,7 @@
 ---
 title: 'Memory Specificity Analyses: Experiment 2'
 author: "Kate Nussenbaum"
-date: "11/13/23"
+date: "6/13/24"
 output: 
   html_document:
     df_print: paged
@@ -32,8 +32,8 @@ font-size: 18px;
 ------------------------------------------------------------------------
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
-knitr::opts_chunk$set(fig.path = "results/figures/concrete/")
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = T)
+knitr::opts_chunk$set(fig.path = "figures/")
 knitr::opts_chunk$set(fig.height = 4, dpi = 600)
 knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 ```
@@ -56,6 +56,18 @@ scale_this <- function(x){
 
 se <- function(x){
     sd(x, na.rm = T)/sqrt(length(x))
+}
+
+tab_model_glmer <- function(model_name){
+    tab_model(model_name,
+          digits = 4,
+          show.intercept = F,
+          show.est = T,
+          show.ci = F,
+          show.se = T,
+          show.stat = F,
+          show.p = F,
+          string.se = "SE")
 }
 ```
 
@@ -164,15 +176,7 @@ learning_cr_model.glmer <- mixed(correct_response_made ~ age_group * learning_tr
                            control = glmerControl(optimizer = "bobyqa"),
                            return = "merMod")
 
-tab_model(learning_cr_model.glmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F,
-          string.se = "SE")
+tab_model_glmer(learning_cr_model.glmer)
 ```
 
 ## Figure 5A: Correct response by block condition, stimulus repetition, and age group
@@ -273,14 +277,12 @@ correct_response_category_rep_plot <- ggplot(correct_response_category_rep,
                                     y = group_mean_correct)) +
     facet_grid(cols = vars(age_group)) +
     geom_point() +
-    geom_smooth(method = "lm", aes(fill = reward_condition)) +
+    geom_line(aes(group = reward_condition)) +
     geom_errorbar(aes(ymin = group_mean_correct - se_correct, ymax = group_mean_correct + se_correct), 
                   width = .1) + 
     xlab("Category Repetition") +
     ylab("Correct Responses to 1st Stim.") +
     scale_color_manual(values = c(color1, color2),
-                       name = "Block Condition") + 
-    scale_fill_manual(values = c(color1, color2),
                        name = "Block Condition") + 
     geom_hline(yintercept = .33, linetype = "dashed") +
     mem_theme +
@@ -335,15 +337,7 @@ cr_first_rep_model.glmer <- mixed(correct_response_made ~ age_group * category_r
                            control = glmerControl(optimizer = "bobyqa"),
                            return = "merMod")
 
-tab_model(cr_first_rep_model.glmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F,
-          string.se = "SE")
+tab_model_glmer(cr_first_rep_model.glmer)
 ```
 
 
@@ -403,15 +397,7 @@ wsls_model.glmer <- mixed(WSLS ~ age_group * learning_trial_scaled * reward_cond
                     control = glmerControl(optimizer = "bobyqa"),
                     return = "merMod")
 
-tab_model(wsls_model.glmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F,
-          string.se = "SE")
+tab_model_glmer(wsls_model.glmer)
 ```
 
 ## Supplementary Figure: WSLS by age group
@@ -491,7 +477,6 @@ WSLS_plot <- ggplot(win_stay_lose_shift, aes(x = factor(within_condition_block_n
 WSLS_plot 
 ```
 
-
 # Memory
 ```{r process in memory data from both age_groups}
 #combine and process
@@ -508,6 +493,23 @@ memory_data$reward_condition <- factor(memory_data$block_condition,
 
 #combine with subject list
 memory_data <- inner_join(memory_data, subject_list, by = c("subject_id"))
+```
+
+
+## Overall descriptive memory stats
+```{r memory stats}
+
+memory_sub_means <- memory_data %>%
+    group_by(subject_id) %>%
+    summarize(mean_sub_mem = mean(mem_acc, na.rm = T))
+
+memory_group_mean <- memory_sub_means %>%
+    summarize(mean_mem = mean(mean_sub_mem, na.rm = T),
+              se_mem = se(mean_sub_mem))
+
+pander(memory_group_mean)
+
+
 ```
 
 
@@ -616,15 +618,7 @@ auc_model.lmer <- mixed(AUC ~ age_group * reward_condition * foil_type + (1|subj
                    method = "S",
                    return = "merMod")
 
-tab_model(auc_model.lmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F,
-          string.se = "SE")
+tab_model_glmer(auc_model.lmer)
 ```
 
 
@@ -656,15 +650,7 @@ auc_model_delay.lmer <- mixed(AUC ~ age_group * reward_condition * foil_type * m
                    method = "S",
                    return = "merMod")
 
-tab_model(auc_model_delay.lmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F,
-          string.se = "SE")
+tab_model_glmer(auc_model_delay.lmer)
 ```
 
 ## Supplementary Figure: AUC values with delay
@@ -693,7 +679,7 @@ param_ests <- read_csv("data/model_estimates/params_fourB_oneQ_CF.csv")
 param_ests <- full_join(param_ests, subject_list, by = c("subject_id"))
 ```
 
-### Figure 5C: Distribution of choice weights
+### Figure: Distribution of choice weights
 ```{r beta histogram, fig.width = 6, fig.height = 4}
 
 #pivot longer
@@ -733,6 +719,20 @@ beta_histogram <- ggplot(beta_ests, aes(x = est)) +
 beta_histogram
 ```
 
+### Figure 5C: Choice weights box plot
+```{r simple choice weights fig, fig.width = 6}
+
+#plot
+choice_weights_plot <- ggplot(beta_ests, aes(y = est, x = abstraction, fill = reward_condition)) +
+    facet_grid(cols = vars(age_group)) + 
+    geom_boxplot() +
+    xlab("Choice Weight Magnitude") +
+    ylab("Estimate") +
+    scale_fill_manual(values = c(color1, color2), name = "Block Condition") +
+    mem_theme +
+    theme(legend.position = "top")
+choice_weights_plot
+```
 
 ### Model: Choice weights by block condition and age group
 ```{r fit choice weight by age group model}
@@ -756,15 +756,7 @@ beta.age.model.lmer <- mixed(est ~ abstraction * reward_condition * age_group + 
                            data = beta_ests,
                            return = "merMod")
 
-tab_model(beta.age.model.lmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F,
-          string.se = "SE")
+tab_model_glmer(beta.age.model.lmer)
 ```
 
 
@@ -791,15 +783,7 @@ beta.age.model.exemp.lmer <- mixed(est ~ reward_condition + (1|subject_id),
                                    data = exemp_beta_ests,
                                    return = "merMod")
 
-tab_model(beta.age.model.exemp.lmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F,
-          string.se = "SE")
+tab_model_glmer(beta.age.model.exemp.lmer)
 ```
 
 
@@ -825,14 +809,82 @@ beta.age.model.cat.lmer <- mixed(est ~ reward_condition + (1|subject_id),
                                    data = cat_beta_ests,
                                    return = "merMod")
 
-tab_model(beta.age.model.cat.lmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F)
+tab_model_glmer(beta.age.model.cat.lmer)
+```
+
+
+### Model: Relation between exemplar and category choice weights
+
+```{r fit model looking at tradeoff between choice weights}
+
+temp <- param_ests %>%
+    pivot_longer(cols = c(beta_c_cCond, beta_c_eCond), 
+                values_to = "beta_c",
+                names_to = "block_condition",
+                names_prefix = "beta_c_") %>%
+    select(subject_id, age, age_group, block_condition, beta_c)
+
+
+temp2 <- param_ests %>%
+    pivot_longer(cols = c(beta_e_cCond, beta_e_eCond), 
+                values_to = "beta_e",
+                names_to = "block_condition",
+                names_prefix = "beta_e_") %>%
+    select(subject_id, block_condition, beta_e)
+  
+beta_ests_wide <- full_join(temp, temp2, by = c("subject_id", "block_condition"))
+                
+
+#scale continuous variables
+beta_ests_wide$age_scaled <- scale_this(beta_ests_wide$age)
+beta_ests_wide$beta_c_scaled <- scale_this(beta_ests_wide$beta_c)
+beta_ests_wide$beta_e_scaled <- scale_this(beta_ests_wide$beta_e)
+
+#do choice weights trade off?
+beta.tradeoff.model <- mixed(beta_e_scaled ~ beta_c_scaled * age_scaled * block_condition + (1|subject_id),
+                            method = "S",
+                           data = beta_ests_wide)
+nice(beta.tradeoff.model) 
+tab_model_glmer(beta.tradeoff.model)
+
+#main effect of age
+#beta c * block condition interaction effect
+```
+
+```{r choice weight tradeoff within each block}
+
+#filter dataset
+beta_ests_wide_exemp_pred <- beta_ests_wide %>%
+    filter(block_condition == "eCond")
+
+beta_ests_wide_cat_pred <- beta_ests_wide %>%
+    filter(block_condition == "cCond")
+
+#scale continuous variables
+beta_ests_wide_exemp_pred$age_scaled <- scale_this(beta_ests_wide_exemp_pred$age)
+beta_ests_wide_exemp_pred$beta_c_scaled <- scale_this(beta_ests_wide_exemp_pred$beta_c)
+beta_ests_wide_exemp_pred$beta_e_scaled <- scale_this(beta_ests_wide_exemp_pred$beta_e)
+beta_ests_wide_cat_pred$age_scaled <- scale_this(beta_ests_wide_cat_pred$age)
+beta_ests_wide_cat_pred$beta_c_scaled <- scale_this(beta_ests_wide_cat_pred$beta_c)
+beta_ests_wide_cat_pred$beta_e_scaled <- scale_this(beta_ests_wide_cat_pred$beta_e)
+
+#run models separately for each condition
+
+#exemplar condition
+beta.tradoff.model.exemp_pred <- lm(beta_e_scaled ~ beta_c_scaled * age_scaled,
+                           data = beta_ests_wide_exemp_pred)
+summary(beta.tradoff.model.exemp_pred)
+
+#marginal positive relation with beta_c_scaled
+#positive effect of age
+
+#category condition
+beta.tradoff.model.cat_pred <- lm(beta_e_scaled ~ beta_c_scaled * age_scaled,
+                           data = beta_ests_wide_cat_pred)
+summary(beta.tradoff.model.cat_pred) 
+
+#no relation with beta_c_scaled
+#positive relation with age
 ```
 
 ### Relations between choice weights and points earned
@@ -958,15 +1010,7 @@ auc_beta_points_model.lmer <- mixed(AUC ~ age_group * points_scaled * abstractio
                                   data = auc_beta_points,
                                   return = "merMod")
 
-tab_model(auc_beta_points_model.lmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F,
-          string.se = "SE")
+tab_model_glmer(auc_beta_points_model.lmer)
 ```
 
 
@@ -1049,15 +1093,7 @@ auc_beta_exemplar_model.lmer <- mixed(AUC ~ age_group * beta_scaled * abstractio
                                   data = auc_beta_exemplar,
                                   return = "merMod")
 
-tab_model(auc_beta_exemplar_model.lmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F,
-          string.se = "SE")
+tab_model_glmer(auc_beta_exemplar_model.lmer)
 ```
 
 
@@ -1118,15 +1154,7 @@ auc_beta_cat_model.lmer <- mixed(AUC ~ age_group * beta_scaled * abstraction * r
                                   data = auc_beta_cat,
                                   return = "merMod")
 
-tab_model(auc_beta_cat_model.lmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F,
-          string.se = "SE")
+tab_model_glmer(auc_beta_cat_model.lmer)
 ```
 
 

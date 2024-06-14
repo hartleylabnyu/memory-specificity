@@ -11,7 +11,7 @@ Cleaned data and parameter estimates from our fitted reinforcement-learning mode
 
 ## Analysis and computational modeling code
 Data was analyzed in R using the R markdown analysis scripts found in the analysis folders. 
-Computational model-fitting was conducted in Matlab (version 2020b). Modeling code is also located in the analysis folders.
+Computational model-fitting was conducted in Matlab (version 2024a). Modeling code is also located in the analysis folders.
 
 ## Contact info
-For questions, please contact katenuss@princeton.edu
+For questions, please contact katenuss@gmail.com

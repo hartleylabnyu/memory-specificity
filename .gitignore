@@ -4,3 +4,6 @@
 **/.Ruserdata
 **/.Rproj
 **/figures/
+**/*_cache/
+.Rproj.user
+experiment_1/analysis/rl_modeling_code/all_data.mat

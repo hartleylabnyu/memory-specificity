@@ -1,0 +1,765 @@
+---
+title: 'Memory Specificity Analyses: Experiment 2 - Children Only, Continuous Age Analyses'
+author: "Kate Nussenbaum"
+date: "6/13/24"
+output: 
+  html_document:
+    df_print: paged
+    theme: flatly
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+---
+
+```{=html}
+<style type="text/css">
+h1.title {
+font-size: 38px;
+}
+h1 { /* Header 1 */
+font-size: 28px;
+}
+h2 { /* Header 2 */
+font-size: 22px;
+}
+h3 { /* Header 3 */
+font-size: 18px;
+}
+
+</style>
+```
+
+------------------------------------------------------------------------
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = T)
+knitr::opts_chunk$set(fig.path = "figures/children_continuous_age/")
+knitr::opts_chunk$set(fig.height = 4, dpi = 600)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+```{r load needed libraries}
+library(tidyverse)
+library(glue)
+library(afex)
+library(ggpubr)
+library(pander)
+library(sjPlot)
+library(latex2exp)
+library(pROC)
+```
+
+```{r define functions}
+scale_this <- function(x){
+  (x - mean(x, na.rm=TRUE)) / sd(x, na.rm=TRUE)
+}
+
+se <- function(x){
+    sd(x, na.rm = T)/sqrt(length(x))
+}
+```
+
+```{r plot theme}
+
+#define colors to use for plots
+color4 =  "#d94f70"
+color5 = "#f88f58"
+color3 = "#45b5aa"
+color1 = "#FFCA4B"
+color2 = "#6364a5"
+
+#define plotting theme
+mem_theme <- theme(panel.background = element_rect(fill='transparent'),
+                   axis.line = element_line(color='black'),
+                   panel.border = element_rect(color = 'black', fill = "transparent"),
+                   panel.grid.minor = element_line(color='transparent'),
+                   axis.title.x = element_text(size=16, vjust=-.25),
+                   axis.title.y = element_text(size=16, vjust=1),
+                   axis.text.x = element_text(size=12, colour="black"),
+                   axis.text.y = element_text(size=12, colour="black"),
+                   legend.text=element_text(size=12),
+                   legend.title = element_text(size = 14),
+                   plot.title = element_text(size=16, face = "bold", hjust = .5), 
+                   strip.text.x = element_text(size=12), 
+                   strip.text.y = element_text(size=12), 
+                   strip.background = element_rect(colour= "black", fill = "transparent"))
+```
+
+# Import and process data 
+```{r import age data}
+
+#read in subject ages
+sub_ages <- read_csv(glue('data/e2_sub_ages.csv')) 
+
+#create list of all included subjects with subject ids, age, age group
+subject_list <- sub_ages %>%
+    mutate(age = as.numeric(age)) %>%
+    mutate(age_group = case_when(age < 13 ~ "Children",
+                                 age >= 13 & age < 18 ~ "Adolescents",
+                                 age >= 18 ~ "Adults")) %>%
+    mutate(age_group = factor(age_group, levels = c("Children", "Adolescents", "Adults")))
+```
+
+
+```{r format data for learning analyses}
+#clean and rename
+learning_data <- read_csv('data/e2_learning_data.csv') %>%
+    mutate(reward_condition = as.factor(case_when(block_condition == 1 ~ "Category-Predictive",
+                                        block_condition == 2 ~ "Exemplar-Predictive"))) %>%
+    group_by(subject_id, task_block, stimulus) %>% 
+    mutate(stimulus_repetition = rank(learning_trial)) %>%
+    ungroup() %>%
+    mutate(correct_response_made = optimal_choice) %>%
+    ungroup() %>%
+    group_by(subject_id, reward_condition) %>%
+    mutate(within_condition_block_num = as.numeric(factor(rank(block_order)))) %>%
+    ungroup()
+
+# add age
+learning_data <- full_join(learning_data, subject_list, by = c('subject_id'))
+
+#factor subject id
+learning_data$subject_id <- factor(learning_data$subject_id)
+```
+
+
+# Learning
+## Model: Correct responses by continuous age, trial, block number, and block condition
+```{r fit learning model}
+learning_cr_model_data <- learning_data %>%
+    filter(age_group == "Children") %>%
+    select(correct_response_made, age, learning_trial, reward_condition, block_order, within_condition_block_num, subject_id) %>%
+    drop_na()
+
+#scale variables
+learning_cr_model_data$learning_trial_scaled <- scale_this(learning_cr_model_data$learning_trial)
+learning_cr_model_data$block_number_scaled <- scale_this(learning_cr_model_data$within_condition_block_num)
+learning_cr_model_data$age_scaled <- scale_this(learning_cr_model_data$age)
+
+#run model
+learning_cr_model <- mixed(correct_response_made ~ age_scaled * learning_trial_scaled * reward_condition * block_number_scaled + (learning_trial_scaled * reward_condition * block_number_scaled || subject_id),
+                           data = learning_cr_model_data,
+                           family = "binomial",
+                           method = "LRT",
+                           expand_re = T,
+                           control = glmerControl(optimizer = "bobyqa"))
+nice(learning_cr_model)
+
+# significant effects of:
+# trial
+# block condition
+# block number
+# trial x block condition
+# condition x block number
+```
+
+```{r display learning model}
+learning_cr_model.glmer <- mixed(correct_response_made ~ age_scaled * learning_trial_scaled * reward_condition * block_number_scaled + (learning_trial_scaled * reward_condition * block_number_scaled || subject_id),
+                           data = learning_cr_model_data,
+                           family = "binomial",
+                           method = "LRT",
+                           expand_re = T,
+                           control = glmerControl(optimizer = "bobyqa"),
+                           return = "merMod")
+
+tab_model(learning_cr_model.glmer,
+          digits = 4,
+          show.intercept = F,
+          show.est = T,
+          show.ci = F,
+          show.se = T,
+          show.stat = F,
+          show.p = F,
+          string.se = "SE")
+```
+
+## Model: Correct response to first appearance of each stimulus
+```{r fit generalization model}
+
+# add category to learning data frame
+learning_data <- learning_data %>%
+    separate(stimulus,
+             into = c(NA, "image"),
+             sep = "/") %>%
+    mutate(stim_num = parse_number(image)) %>%
+    separate(image,
+             into = c("category", NA),
+             sep = "([123456])",
+             remove=FALSE)
+
+# determine category repetition number
+learning_data <- learning_data %>%
+    group_by(subject_id, task_block, category, age_group) %>%
+    mutate(category_rep = rank(learning_trial))
+
+#get model data
+cr_first_rep_data  <- learning_data %>%
+    filter(age_group == "Children") %>%
+    select(correct_response_made, age, category_rep, reward_condition, block_order, subject_id, stimulus_repetition, within_condition_block_num) %>%
+    filter(stimulus_repetition == 1) %>%
+    drop_na()
+
+#scale variables
+cr_first_rep_data$category_rep_scaled <- scale_this(cr_first_rep_data$category_rep)
+cr_first_rep_data$block_number_scaled <- scale_this(cr_first_rep_data$within_condition_block_num)
+cr_first_rep_data$age_scaled <- scale_this(cr_first_rep_data$age)
+
+#run model
+cr_first_rep_model <- mixed(correct_response_made ~ age_scaled * category_rep_scaled * reward_condition * block_number_scaled  + (reward_condition || subject_id),
+                           data = cr_first_rep_data,
+                           family = "binomial",
+                           method = "LRT",
+                           expand_re = T,
+                           control = glmerControl(optimizer = "bobyqa"))
+nice(cr_first_rep_model)
+
+# with full random effects: singular fit
+# removed interactions between random slope: still singular fit
+# removed block number random slope: still singular fit
+# removed category rep random slope, put block number back in: still singular fit
+# removed block number random slope
+
+
+# Significant effects of:
+# category rep
+# block condition
+# category rep x block condition
+# age x category rep x block number
+```
+
+```{r display generalization model}
+cr_first_rep_model.glmer <- mixed(correct_response_made ~ age_scaled * category_rep_scaled * reward_condition * block_number_scaled  + (reward_condition || subject_id),
+                           data = cr_first_rep_data,
+                           family = "binomial",
+                           method = "LRT",
+                           expand_re = T,
+                           control = glmerControl(optimizer = "bobyqa"),
+                           return = "merMod")
+
+tab_model(cr_first_rep_model.glmer,
+          digits = 4,
+          show.intercept = F,
+          show.est = T,
+          show.ci = F,
+          show.se = T,
+          show.stat = F,
+          show.p = F,
+          string.se = "SE")
+```
+
+
+## Model: Category win-stay lose-shift 
+```{r fit WSLS model}
+
+#determine win-stay lose shift behavior across age and blocks
+learning_data <- learning_data %>% 
+    group_by(subject_id, block_order, category) %>%
+    mutate(prior_cat_stim = lag(image), #previous stimulus
+           prior_cat_response = lag(option_selected), #previous response
+           prior_cat_points = lag(points), #previous outcome (win or lose) 
+           category_stay = case_when(prior_cat_response == option_selected ~ 1,
+                                prior_cat_response != option_selected ~ 0),
+           same_stim = case_when(image == prior_cat_stim ~ 1,
+                                 image != prior_cat_stim ~ 0)) %>%
+    ungroup()  %>%
+        mutate(WSLS = case_when(prior_cat_points == 1 & category_stay == 1 ~ 1, 
+                            prior_cat_points == 1 & category_stay == 0 ~ 0,
+                            prior_cat_points == -1 & category_stay == 1 ~ 0, 
+                            prior_cat_points == -1 & category_stay == 0 ~ 1))
+
+wsls_model_data <- learning_data %>% 
+    filter(age_group == "Children") %>%
+    select(subject_id, age, WSLS, learning_trial, reward_condition, block_order, within_condition_block_num) %>%
+    drop_na() 
+
+#scale variables
+wsls_model_data$learning_trial_scaled <- scale_this(wsls_model_data$learning_trial)
+wsls_model_data$block_number_scaled <- scale_this(wsls_model_data$within_condition_block_num)
+wsls_model_data$age_scaled <- scale_this(wsls_model_data$age)
+
+#run model
+wsls_model <- mixed(WSLS ~ age_scaled * learning_trial_scaled * reward_condition * block_number_scaled  + (reward_condition  || subject_id),
+                    data = wsls_model_data,
+                    family = "binomial",
+                    method = "LRT",
+                    expand_re = T,
+                    control = glmerControl(optimizer = "bobyqa"))
+nice(wsls_model)
+
+# with full random effects: singular fit
+# removed interactions between random slopes: still singular fit
+# removed block number random slope: still singular fit
+# removed trial from random slope
+
+# significant effects of:
+# block condition
+# block number
+# age x trial
+# trial x block condition
+# block condition x block number
+# age x condition x block number
+```
+
+```{r display win stay lose shift model}
+wsls_model.glmer <- mixed(WSLS ~ age_scaled * learning_trial_scaled * reward_condition * block_number_scaled  + (reward_condition || subject_id),
+                    data = wsls_model_data,
+                    family = "binomial",
+                    method = "LRT",
+                    expand_re = T,
+                    control = glmerControl(optimizer = "bobyqa"),
+                    return = "merMod")
+
+tab_model(wsls_model.glmer,
+          digits = 4,
+          show.intercept = F,
+          show.est = T,
+          show.ci = F,
+          show.se = T,
+          show.stat = F,
+          show.p = F,
+          string.se = "SE")
+```
+
+```{r plot win stay lose shift across age}
+
+sjPlot::set_theme( 
+    base = theme_classic(),
+    legend.item.backcol = "transparent",
+    geom.boxoutline.color = "black",
+    axis.textsize = 1,
+    axis.textcolor = "black",
+    axis.title.color = "black",
+    axis.title.size = 1.1,
+    axis.title.x.vjust = -.25,
+    axis.title.y.vjust = 1,
+    legend.title.size = 1.05)
+
+plot_model(wsls_model.glmer,
+           type = "pred",
+           terms = c("learning_trial_scaled", "age_scaled", "reward_condition"),
+           colors = c(color1, color2, color3)) 
+
+```
+
+# Memory
+```{r process memory data}
+#combine and process
+memory_data <- read_csv('data/e2_memory_data.csv') %>%
+    filter(is.na(mem_acc) == F)
+
+#relabel foil type and reward condition
+memory_data$foil_type <- factor(memory_data$foil_type, levels = c("old", "exemplar", "category"),
+                                  labels = c("Old", "Novel Exemplar", "Novel Category"))
+
+memory_data$reward_condition <- factor(memory_data$block_condition,
+                                            levels = c(1, 2),
+                                            labels = c("Category-Predictive", "Exemplar-Predictive"))
+
+#combine with subject list
+memory_data <- inner_join(memory_data, subject_list, by = c("subject_id"))
+```
+
+
+```{r fit ROC curves for each participant and derive AUC}
+exemplar_AUCs <- memory_data %>%
+    filter(foil_type != "Novel Category") %>%
+    select(subject_id,  age, memory_delay, age_group, reward_condition, correct_mem_response, conf_rating) %>%
+    group_by(subject_id, memory_delay, age_group, reward_condition) %>%
+    mutate(exemplar = as.numeric(roc(correct_mem_response ~ conf_rating)$auc)) %>%
+    select(subject_id, age, memory_delay, reward_condition, exemplar) %>%
+    unique()
+
+category_AUCs <- memory_data %>%
+    filter(foil_type != "Novel Exemplar") %>%
+    select(subject_id, age, memory_delay,  age_group, reward_condition, correct_mem_response, conf_rating) %>%
+    group_by(subject_id, memory_delay,  age_group, reward_condition) %>%
+    mutate(category = as.numeric(roc(correct_mem_response ~ conf_rating)$auc)) %>%
+    select(subject_id,  age, memory_delay, reward_condition, category) %>%
+    unique()
+
+#combine AUCs into single data frame
+participant_AUCs <- full_join(exemplar_AUCs, category_AUCs, by = c("subject_id", "age_group", "reward_condition", "memory_delay", "age")) %>%
+    pivot_longer(cols = c(exemplar, category),
+                 names_to = "foil_type",
+                 values_to = "AUC")
+
+```
+
+
+## Model: AUCs by age, reward condition, memory specificity
+```{r fit auc model}
+aucs <- full_join(participant_AUCs, subject_list, by = c("subject_id", "age_group", "age")) %>%
+    filter(age_group == "Children")
+
+#scale age 
+aucs$age_scaled <- scale_this(aucs$age)
+
+#run model
+auc_model <- mixed(AUC ~ age_scaled * reward_condition * foil_type + (1|subject_id),
+                   data = aucs,
+                   method = "S")
+nice(auc_model)
+
+#effects of:
+# reward condition
+# foil type
+# marginal  reward condition x foil type
+```
+
+```{r display auc model}
+
+#run model
+auc_model.lmer <- mixed(AUC ~ age_scaled * reward_condition * foil_type + (1|subject_id),
+                   data = aucs,
+                   method = "S",
+                   return = "merMod")
+
+tab_model(auc_model.lmer,
+          digits = 4,
+          show.intercept = F,
+          show.est = T,
+          show.ci = F,
+          show.se = T,
+          show.stat = F,
+          show.p = F,
+          string.se = "SE")
+```
+
+
+# RL modeling
+## Choice weights
+```{r cbm parameter ests fourB_oneA_oneQ_CF}
+#read in param ests
+param_ests <- read_csv("data/model_estimates/params_fourB_oneQ_CF.csv")
+
+#merge with age
+param_ests <- full_join(param_ests, subject_list, by = c("subject_id"))
+```
+
+```{r beta distribution}
+
+#pivot longer
+beta_ests <- param_ests %>%
+    pivot_longer(cols = c(beta_c_cCond: beta_e_eCond),
+                 names_to = "beta_parameter",
+                 names_prefix = "beta_",
+                 values_to = "est") %>%
+    separate(beta_parameter, into = c("beta_val", "block_condition"), sep = "_") %>%
+    drop_na()
+
+beta_ests$abstraction <- factor(beta_ests$beta_val,
+                                levels = c("c", "e"),
+                                labels = c("category", "exemplar"))
+
+beta_ests$reward_condition <- factor(beta_ests$block_condition,
+                                levels = c("cCond", "eCond"),
+                                labels = c("Category-Predictive", "Exemplar-Predictive"))
+```
+
+
+### Model: Choice weights by block condition and age 
+```{r fit choice weight by age model}
+
+#filter to just include children
+beta_ests <- beta_ests %>%
+    filter(age_group == "Children")
+
+#scale age
+beta_ests$age_scaled <- scale_this(beta_ests$age)
+
+#do betas change across conditions and by age?
+beta.age.model <- mixed(est ~ abstraction * reward_condition * age_scaled + (1|subject_id),
+                            method = "S",
+                        data = beta_ests)
+nice(beta.age.model) 
+
+# effect of
+# age
+```
+
+```{r display choice weight by age model}
+beta.age.model.lmer <- mixed(est ~ abstraction * reward_condition * age_scaled + (1|subject_id),
+                            method = "S",
+                           data = beta_ests,
+                           return = "merMod")
+
+tab_model(beta.age.model.lmer,
+          digits = 4,
+          show.intercept = F,
+          show.est = T,
+          show.ci = F,
+          show.se = T,
+          show.stat = F,
+          show.p = F,
+          string.se = "SE")
+```
+
+
+### Model: Exemplar choice weights by condition
+```{r fit exemplar choice weight by condition model}
+
+#filter data
+exemp_beta_ests <- beta_ests %>%
+    filter(abstraction == "exemplar") 
+
+#do betas change across conditions?
+beta.age.model.exemp <- mixed(est ~ reward_condition + (1|subject_id),
+                            method = "S",
+                           data = exemp_beta_ests)
+nice(beta.age.model.exemp) 
+
+# no effects
+```
+
+
+```{r display exemplar choice weight by condition model}
+beta.age.model.exemp.lmer <- mixed(est ~ reward_condition + (1|subject_id),
+                                   method = "S",
+                                   data = exemp_beta_ests,
+                                   return = "merMod")
+
+tab_model(beta.age.model.exemp.lmer,
+          digits = 4,
+          show.intercept = F,
+          show.est = T,
+          show.ci = F,
+          show.se = T,
+          show.stat = F,
+          show.p = F,
+          string.se = "SE")
+```
+
+
+### Relations between choice weights and points earned
+```{r choice weights points data processing}
+participant_points <- learning_data %>%
+    group_by(subject_id, reward_condition) %>%
+    summarize(total_points = sum(points, na.rm = T)) 
+
+beta_ests$subject_id <- factor(beta_ests$subject_id)
+
+beta_ests_points <- full_join(participant_points, beta_ests, by = c("subject_id", "reward_condition"))
+```
+
+```{r fit choice weights points model}
+
+#drop na
+beta_ests_points <- beta_ests_points %>%
+    filter(age_group == "Children") %>%
+    select(est, total_points, age,  abstraction, reward_condition, subject_id) %>%
+    drop_na()
+
+#scale beta estimate
+beta_ests_points$beta_scaled <- scale_this(beta_ests_points$est)
+beta_ests_points$age_scaled <- scale_this(beta_ests_points$age)
+
+#do beta values predict points?
+beta_points_model <- mixed(total_points ~ age_scaled * beta_scaled * abstraction * reward_condition + (1|subject_id),
+                           data = beta_ests_points)
+beta_points_model
+
+# effects of 
+# beta
+# reward condition
+# beta x reward condition
+# beta x abstraction x reward condition
+```
+
+
+# Relations between learning and memory
+```{r auc points data processing}
+temp <- aucs %>%
+    select(subject_id, memory_delay, reward_condition, abstraction = foil_type, age_group, age, AUC)
+
+temp$subject_id <- factor(temp$subject_id)
+
+#join data
+auc_beta_points <- full_join(temp, beta_ests_points, by = c("subject_id", "reward_condition", "abstraction",  "age")) %>%
+    filter(age_group == "Children")
+
+```
+
+## Do points earned during learning relate to memory?
+
+### Model: AUC by points earned, reward condition, age 
+```{r auc points relation}
+
+#does the number of points participants earned in each block relate to memory performance?
+auc_beta_points$age_scaled  <- scale_this(auc_beta_points$age)
+auc_beta_points$points_scaled  <- scale_this(auc_beta_points$total_points)
+
+auc_beta_points_model <- mixed(AUC ~ age_scaled * points_scaled * abstraction * reward_condition + (1|subject_id),
+                                  method = "S",
+                                  data = auc_beta_points)
+nice(auc_beta_points_model) 
+
+# main effect of points - participants who earned more points had better memory
+# abstraction
+# block condition
+```
+
+```{r display auc points model}
+
+auc_beta_points_model.lmer <- mixed(AUC ~ age_scaled * points_scaled * abstraction * reward_condition + (1|subject_id),
+                                  method = "S",
+                                  data = auc_beta_points,
+                                  return = "merMod")
+
+tab_model(auc_beta_points_model.lmer,
+          digits = 4,
+          show.intercept = F,
+          show.est = T,
+          show.ci = F,
+          show.se = T,
+          show.stat = F,
+          show.p = F,
+          string.se = "SE")
+```
+
+
+## Do choice weights relate to memory?
+```{r auc beta data processing}
+temp <- aucs %>%
+    select(subject_id, memory_delay, reward_condition, abstraction = foil_type, age_group, age, AUC)
+
+temp$subject_id <- factor(temp$subject_id)
+
+#join data
+auc_beta <- full_join(temp, beta_ests, by = c("subject_id", "reward_condition", "abstraction", "age_group", "age"))
+
+```
+
+### Model: AUC by age, exemplar choice weights, specificity, block condition 
+```{r fit auc exemplar choice weights model}
+
+#join data
+beta_ests_exemplar <- beta_ests %>%
+    filter(abstraction == "exemplar") %>%
+    select(subject_id, est, reward_condition)
+
+auc_beta_exemplar <- full_join(temp, beta_ests_exemplar, by = c("subject_id", "reward_condition")) %>%
+    filter(age_group == "Children")
+
+#scale variables
+auc_beta_exemplar$beta_scaled <-scale_this(auc_beta_exemplar$est)
+auc_beta_exemplar$age_scaled  <-scale_this(auc_beta_exemplar$age)
+
+auc_beta_exemplar_model <- mixed(AUC ~ age_scaled * beta_scaled * abstraction * reward_condition + (1|subject_id),
+                                  method = "S",
+                                  data = auc_beta_exemplar)
+nice(auc_beta_exemplar_model) 
+
+# effects of 
+# abstraction
+# reward condition
+# age x beta x abstraction
+```
+
+```{r display auc exemplar choice weights model}
+
+auc_beta_exemplar_model.lmer <- mixed(AUC ~ age_scaled * beta_scaled * abstraction * reward_condition + (1|subject_id),
+                                  method = "S",
+                                  data = auc_beta_exemplar,
+                                  return = "merMod")
+
+tab_model(auc_beta_exemplar_model.lmer,
+          digits = 4,
+          show.intercept = F,
+          show.est = T,
+          show.ci = F,
+          show.se = T,
+          show.stat = F,
+          show.p = F,
+          string.se = "SE")
+```
+
+
+### AUC by exemplar choice weights: model effects
+```{r plot auc by exemplar choice weights model effects, fig.width = 10}
+
+sjPlot::set_theme( 
+    base = theme_classic(),
+    legend.item.backcol = "transparent",
+    geom.boxoutline.color = "black",
+    axis.textsize = 1,
+    axis.textcolor = "black",
+    axis.title.color = "black",
+    axis.title.size = 1.1,
+    axis.title.x.vjust = -.25,
+    axis.title.y.vjust = 1,
+    legend.title.size = 1.05)
+
+
+plot_model(auc_beta_exemplar_model.lmer,  type = "pred",
+           terms = c("beta_scaled", "age_scaled", "abstraction"),
+           colors = c(color1, color2, color3))
+```
+
+### Model: AUC by age, category choice weights, specificity, block condition 
+```{r fit auc category choice weights model}
+
+#join data
+beta_ests_cat <- beta_ests %>%
+    filter(abstraction == "category") %>%
+    select(subject_id, est, reward_condition)
+
+auc_beta_cat <- full_join(temp, beta_ests_cat, by = c("subject_id", "reward_condition")) %>%
+    filter(age_group == "Children")
+
+#scale variables
+auc_beta_cat$beta_scaled <-scale_this(auc_beta_cat$est)
+auc_beta_cat$age_scaled  <-scale_this(auc_beta_cat$age)
+
+#fit model
+auc_beta_cat_model <- mixed(AUC ~ age_scaled * beta_scaled * abstraction * reward_condition + (1|subject_id),
+                                  method = "S",
+                                  data = auc_beta_cat)
+nice(auc_beta_cat_model) 
+
+#effects of 
+# abstraction
+# block condition
+# beta x abstraction
+# marginal age  x beta x reward condition
+```
+
+```{r display auc category choice weights model}
+
+auc_beta_cat_model.lmer <- mixed(AUC ~ age_scaled * beta_scaled * abstraction * reward_condition + (1|subject_id),
+                                  method = "S",
+                                  data = auc_beta_cat,
+                                  return = "merMod")
+
+tab_model(auc_beta_cat_model.lmer,
+          digits = 4,
+          show.intercept = F,
+          show.est = T,
+          show.ci = F,
+          show.se = T,
+          show.stat = F,
+          show.p = F,
+          string.se = "SE")
+```
+
+
+### Figure 5F: AUC by category choice weights: model effects
+```{r plot auc by cat choice weights model effects, fig.width = 10}
+
+sjPlot::set_theme( 
+    base = theme_classic(),
+    legend.item.backcol = "transparent",
+    geom.boxoutline.color = "black",
+    axis.textsize = 1,
+    axis.textcolor = "black",
+    axis.title.color = "black",
+    axis.title.size = 1.1,
+    axis.title.x.vjust = -.25,
+    axis.title.y.vjust = 1,
+    legend.title.size = 1.05)
+
+
+plot_model(auc_beta_cat_model.lmer,  type = "pred",
+           terms = c("beta_scaled", "age_scaled", "reward_condition"),
+           colors = c(color1, color2, color3)) 
+```
+

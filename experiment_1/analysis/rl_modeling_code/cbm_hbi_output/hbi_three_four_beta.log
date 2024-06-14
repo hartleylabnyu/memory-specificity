@@ -1,0 +1,11 @@
+cbm_hbi_hbi                                       05-Jun-2024 17:07:17
+Running hierarchical bayesian inference (HBI)...
+
+HBI has been initialized according to
+	cbm_lap_output/lap_threeB_oneQ [for model 1]
+	cbm_lap_output/lap_fourB_oneQ [for model 2]
+ 
+Number of samples: 151
+Number of models: 2
+======================================================================
+Iteration 01
