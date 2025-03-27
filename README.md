@@ -10,13 +10,9 @@ The tasks were coded in jsPsych version 6.3.1 and administered online via Pavlov
 Cleaned data and parameter estimates from our fitted reinforcement-learning models can be found in the data folders within each experiment. 
 
 ## Analysis and computational modeling code
-<<<<<<< HEAD
 Data was analyzed in R using the R markdown analysis scripts found in the analysis folders. 
 Computational model-fitting was conducted in Matlab (version 2024a). Modeling code is also located in the analysis folders.
 
-## Contact info
-For questions, please contact katenuss@gmail.com
-=======
 ### System requirements and installation guide
 Data was analyzed in R (version 4.3.1) via RStudio (version 2023.09.1+49) and Matlab (version 2020b) on macOS Ventura. Code likely works with other software versions and operating systems but has not been tested. Instructions for installation can be found [here](https://posit.co/download/rstudio-desktop/) and [here](https://www.mathworks.com/help/install/).
 
@@ -28,5 +24,6 @@ Computational model-fitting was conducted in Matlab with the [cbm package](https
 Regression analyses were conducted and figures were created in R. The R markdown analysis scripts found in the analysis folders will reproduce the analyses described in the manuscript. 'Knitting' each R markdown script will generate an html file with analysis results, as well as .png files for all generated figures (which will be stored in the 'figures') subfolders. Several of the mixed-effects models take a long time to fit. Running each full analysis markdown file on a 'normal' computer may take several hours.
 
 ## Contact info
-For questions, please contact katenuss@princeton.edu.
->>>>>>> e85cbd434c4fb04038d268294a5295054e6af916
+For questions, please contact katenuss@gmail.com
+
+
