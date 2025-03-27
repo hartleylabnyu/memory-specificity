@@ -578,7 +578,7 @@ auc_means <- participant_AUCs %>%
 auc_plot <- ggplot(participant_AUCs) +
     facet_grid(cols = vars(age_group), rows = vars(foil_type)) +
     geom_hline(yintercept = .5, linetype = "dashed") +
-       geom_point(data = participant_AUCs, aes(x = reward_condition, color = foil_type, y = AUC), shape = 95, size = 20, alpha = .2) + 
+       geom_point(data = participant_AUCs, aes(x = reward_condition, color = foil_type, y = AUC), shape = 95, size = 15, alpha = .2) + 
     geom_point(data = auc_means, aes(x = reward_condition, y = mean_auc), color = "black", size = 2) +
     geom_errorbar(data = auc_means, aes(x = reward_condition, y = mean_auc, ymin = mean_auc - se_auc, ymax = mean_auc + se_auc), color = "black", width = .1) +
     geom_line(data = auc_means, aes(x = reward_condition, y = mean_auc, group = age_group), color = "black", linewidth = .5) +
@@ -1034,7 +1034,7 @@ auc_beta_points_means <- auc_beta_points %>%
 auc_points_plot <- ggplot(auc_beta_points) +
     facet_grid(cols = vars(performance_group), rows = vars(abstraction)) +
       geom_hline(yintercept = .5, linetype = "dashed") +
-    geom_point(data = auc_beta_points, aes(x = reward_condition, color = abstraction, y = AUC), shape = 95, size = 30, alpha = .2) + 
+    geom_point(data = auc_beta_points, aes(x = reward_condition, color = abstraction, y = AUC), shape = 95, size = 15, alpha = .2) + 
     geom_point(data = auc_beta_points_means, aes(x = reward_condition, y = mean_auc), color = "black", size = 2) +
     geom_errorbar(data = auc_beta_points_means, aes(x = reward_condition, y = mean_auc, ymin = mean_auc - se_auc, ymax = mean_auc + se_auc), color = "black", width = .1) +
     geom_line(data = auc_beta_points_means, aes(x = reward_condition, y = mean_auc, group = performance_group), color = "black", size = .5) +

@@ -8,3 +8,4 @@
 **/*.DS_Store
 experiment_1/analysis/rl_modeling_code/all_data.mat
 experiment_2/analysis/rl_modeling_code/all_data.mat
+.Rproj.user

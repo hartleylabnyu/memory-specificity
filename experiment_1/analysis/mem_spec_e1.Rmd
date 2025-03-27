@@ -1,7 +1,7 @@
 ---
 title: 'Memory Specificity Analyses: Experiment 1'
 author: "Kate Nussenbaum"
-date: "6/13/24"
+date: "3/27/25"
 output: 
   html_document:
     df_print: paged
@@ -35,6 +35,7 @@ font-size: 18px;
 knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = T)
 knitr::opts_chunk$set(fig.path = "figures/")
 knitr::opts_chunk$set(fig.height = 4, dpi = 600)
+knitr::opts_chunk$set(dev = 'svg')
 knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 ```
 
@@ -68,8 +69,8 @@ tab_model_glmer <- function(model_name){
           digits = 4,
           show.intercept = F,
           show.est = T,
-          show.ci = F,
-          show.se = T,
+          show.ci = .95,
+          show.se = F,
           show.stat = F,
           show.p = F,
           string.se = "SE")
@@ -216,18 +217,18 @@ correct_response_summary <- correct_response_summary_sub  %>%
               se_correct = se(mean_correct))
 
 #group means
-correct_response_plot <- ggplot(correct_response_summary, 
-                                    aes(x = stimulus_repetition, 
-                                        color = reward_condition,
-                                        y = group_mean_correct)) +
+correct_response_plot <- ggplot(correct_response_summary_sub, 
+                                    aes(x = as.factor(stimulus_repetition), 
+                                        fill = reward_condition,
+                                        color = "black",
+                                        y = mean_correct)) +
     facet_grid(cols = vars(age_group)) +
-    geom_point() +
-    geom_line() +
-    geom_errorbar(aes(ymin = group_mean_correct - se_correct, ymax = group_mean_correct + se_correct), 
-                  width = .1) + 
+    geom_boxplot(alpha = .5, color = "black") +
+   # geom_errorbar(aes(ymin = group_mean_correct - se_correct, ymax = group_mean_correct + se_correct), 
+  #                width = .1) + 
     xlab("Stimulus Repetition") +
     ylab("Proportion of Correct Responses") +
-    scale_color_manual(values = c(color1, color2),
+    scale_fill_manual(values = c(color1, color2),
                        name = "Block Condition") + 
     geom_hline(yintercept = .5, linetype = "dashed") +
     scale_y_continuous(breaks = c(.5, .7, .9)) +
@@ -235,6 +236,54 @@ correct_response_plot <- ggplot(correct_response_summary,
     theme(legend.position = "top")
 correct_response_plot
 ```
+
+```{r plot learning by age group lines}
+
+#plot
+learning_lines_plot <- ggplot() +
+    facet_grid(cols = vars(age_group)) +
+       geom_point(
+        data = correct_response_summary_sub,
+        aes(x = factor(stimulus_repetition), color = reward_condition, y = mean_correct),
+        shape = 95,
+        size = 10,
+        alpha = .2
+    ) +
+    geom_point(
+        data = correct_response_summary,
+        aes(x = factor(stimulus_repetition), 
+            y = group_mean_correct,
+            color = reward_condition),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = correct_response_summary,
+        aes(
+            x = factor(stimulus_repetition),
+            y = group_mean_correct,
+            color = reward_condition,
+            ymin = group_mean_correct - se_correct,
+            ymax = group_mean_correct + se_correct),
+        width = .1
+    ) +
+    geom_line(
+        data = correct_response_summary,
+        aes(x = factor(stimulus_repetition), 
+            y = group_mean_correct,
+            color = reward_condition, 
+            group = reward_condition),
+        linewidth = 1
+    ) +
+    xlab("Stimulus Repetition") +
+    ylab("Proportion of Correct Responses") +
+        scale_color_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    mem_theme  +
+    theme(legend.position = "top")
+learning_lines_plot
+```
+
 
 ## Supplementary Figure: Correct response by block condition and block number
 ```{r plot learning by block number}
@@ -256,7 +305,7 @@ correct_response_plot <- ggplot(correct_response_summary_sub,
                                     aes(x = factor(within_condition_block_num), 
                                         fill = reward_condition,
                                         y = mean_correct)) +
-    geom_boxplot(alpha = .7) + 
+    geom_boxplot(alpha = .5) + 
     xlab("Block Number") +
     ylab("Proportion of Correct Responses") +
     scale_fill_manual(values = c(color1, color2),
@@ -267,8 +316,69 @@ correct_response_plot <- ggplot(correct_response_summary_sub,
 correct_response_plot
 ```
 
+
+```{r plot learning by block number lines}
+
+# Plot correct response as a function of reward condition and stimulus repetition 
+correct_response_summary_sub <- learning_data %>%
+    filter(block_condition == "2" | cat_type != "neutral") %>%
+    filter(rt > 0) %>%
+    group_by(stimulus_repetition, within_condition_block_num, reward_condition, subject_id,) %>%
+    summarize(mean_correct = mean(correct_response_made, na.rm = T))
+
+correct_response_summary <- correct_response_summary_sub  %>%
+    group_by(stimulus_repetition, within_condition_block_num, reward_condition) %>%
+    summarize(group_mean_correct = mean(mean_correct, na.rm = T),
+              se_correct = se(mean_correct))
+
+#plot
+learning_lines_plot <- ggplot() +
+    facet_grid(cols = vars(within_condition_block_num)) +
+       geom_point(
+        data = correct_response_summary_sub,
+        aes(x = factor(stimulus_repetition), color = reward_condition, y = mean_correct),
+        shape = 95,
+        size = 10,
+        alpha = .2
+    ) +
+    geom_point(
+        data = correct_response_summary,
+        aes(x = factor(stimulus_repetition), 
+            y = group_mean_correct,
+            color = reward_condition),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = correct_response_summary,
+        aes(
+            x = factor(stimulus_repetition),
+            y = group_mean_correct,
+            color = reward_condition,
+            ymin = group_mean_correct - se_correct,
+            ymax = group_mean_correct + se_correct),
+        width = .1
+    ) +
+    geom_line(
+        data = correct_response_summary,
+        aes(x = factor(stimulus_repetition), 
+            y = group_mean_correct,
+            color = reward_condition, 
+            group = reward_condition),
+        linewidth = 1
+    ) +
+    xlab("Stimulus Repetition") +
+    ylab("Proportion of Correct Responses") +
+        scale_color_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    mem_theme  +
+    theme(legend.position = "top")
+learning_lines_plot
+```
+
+
 ## Figure 2B: Generalization by block condition, category repetition, age group
-```{r plot generalization by age group}
+```{r generalization data processing}
 
 # add category to learning data frame
 learning_data <- learning_data %>%
@@ -285,35 +395,94 @@ learning_data <- learning_data %>%
 learning_data <- learning_data %>%
     group_by(subject_id, task_block, category, age_group) %>%
     mutate(category_rep = rank(trial_index))
+```
+
+
+```{r plot generalization by age group lines}
 
 # determine correct responses as a function of stimulus rep and category rep
-correct_response_category_rep <- learning_data %>%
+correct_response_category_rep_sub <- learning_data %>%
     filter(block_condition == "2" | cat_type != "neutral") %>%
     filter(rt > 0) %>%
-    group_by(reward_condition, stimulus_repetition, category_rep, age_group) %>%
-    summarize(group_mean_correct = mean(correct_response_made, na.rm = T),
-              se_correct = se(correct_response_made))  %>%
+    mutate(category_rep_group = case_when(category_rep < 6 ~ "1 - 5",
+                                          category_rep > 5 & category_rep < 12 ~ "6 - 11",
+                                          category_rep > 11 ~ "12 - 17")) %>%
+    group_by(reward_condition, stimulus_repetition, category_rep_group, age_group, subject_id) %>%
+    summarize(mean_correct = mean(correct_response_made, na.rm = T))  %>%
+    filter(stimulus_repetition == 1)
+
+correct_response_category_rep_sub$category_rep_group <- factor(correct_response_category_rep_sub$category_rep_group, levels = c("1 - 5", "6 - 11", "12 - 17"))
+
+correct_response_category_rep <- correct_response_category_rep_sub %>%
+    group_by(reward_condition, stimulus_repetition, category_rep_group, age_group) %>%
+    summarize(mean_correct_group = mean(mean_correct, na.rm = T),
+              se_correct = sd(mean_correct, na.rm = T)/sqrt(n()))  %>%
     filter(stimulus_repetition == 1)
 
 #plot
-correct_response_category_rep_plot <- ggplot(correct_response_category_rep, 
-                                aes(x = category_rep,
-                                    color = reward_condition,
-                                    y = group_mean_correct)) +
+correct_response_category_rep_plot <- ggplot() +
     facet_grid(cols = vars(age_group)) +
-    geom_point() +
-    geom_line(aes(color = reward_condition, group = reward_condition)) +
-    geom_errorbar(aes(ymin = group_mean_correct - se_correct, ymax = group_mean_correct + se_correct), 
-                  width = .1) + 
+       geom_point(
+        data = correct_response_category_rep_sub,
+        aes(x = category_rep_group, color = reward_condition, y = mean_correct),
+        shape = 95,
+        size = 15,
+        alpha = .2
+    ) +
+    geom_point(
+        data = correct_response_category_rep,
+        aes(x = category_rep_group, y = mean_correct_group,
+        color = reward_condition),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = correct_response_category_rep,
+        aes(
+            x = category_rep_group,
+            y = mean_correct_group,
+            color = reward_condition,
+            ymin = mean_correct_group - se_correct,
+            ymax = mean_correct_group + se_correct),
+        width = .1
+    ) +
+    geom_line(
+        data = correct_response_category_rep,
+        aes(x = category_rep_group, y = mean_correct_group,
+        color = reward_condition, group = reward_condition),
+        linewidth = 1
+    ) +
     xlab("Category Repetition") +
     ylab("Correct Responses to 1st Stim.") +
-    scale_color_manual(values = c(color1, color2),
+        scale_color_manual(values = c(color1, color2),
                        name = "Block Condition") + 
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    mem_theme  +
+    theme(legend.position = "top",
+          axis.text.x = element_text(angle = 52, hjust = 1))
+correct_response_category_rep_plot
+```
+
+
+```{r plot generalization by age group boxplot}
+
+
+#plot
+correct_response_category_rep_plot <- ggplot() +
+    facet_grid(cols = vars(age_group)) +
+       geom_boxplot(
+        data = correct_response_category_rep_sub,
+        aes(x = category_rep_group, fill = reward_condition, y = mean_correct),
+        alpha = .5
+    ) +
+    xlab("Category Repetition") +
+    ylab("Correct Responses to 1st Stim.") +
         scale_fill_manual(values = c(color1, color2),
                        name = "Block Condition") + 
     geom_hline(yintercept = .5, linetype = "dashed") +
     mem_theme  +
-    theme(legend.position = "top")
+    theme(legend.position = "top",
+          axis.text.x = element_text(angle = 52, hjust = 1),
+          legend.title = element_text(face = "plain"))
 correct_response_category_rep_plot
 ```
 
@@ -375,33 +544,64 @@ tab_model_glmer(cr_first_rep_model.glmer)
 ```{r plot generalization by block number}
 
 # determine correct responses as a function of stimulus rep and category rep
-correct_response_category_rep <- learning_data %>%
+correct_response_category_rep_sub <- learning_data %>%
     filter(block_condition == "2" | cat_type != "neutral") %>%
     filter(rt > 0) %>%
-    group_by(reward_condition, stimulus_repetition, category_rep, within_condition_block_num) %>%
-    summarize(group_mean_correct = mean(correct_response_made, na.rm = T),
-              se_correct = se(correct_response_made))  %>%
+    mutate(category_rep_group = case_when(category_rep < 6 ~ "1 - 5",
+                                          category_rep > 5 & category_rep < 12 ~ "6 - 11",
+                                          category_rep > 11 ~ "12 - 17")) %>%
+    group_by(reward_condition, stimulus_repetition, category_rep_group, within_condition_block_num, subject_id) %>%
+    summarize(mean_correct = mean(correct_response_made, na.rm = T))  %>%
+    filter(stimulus_repetition == 1)
+
+correct_response_category_rep_sub$category_rep_group <- factor(correct_response_category_rep_sub$category_rep_group, levels = c("1 - 5", "6 - 11", "12 - 17"))
+
+correct_response_category_rep <- correct_response_category_rep_sub %>%
+    group_by(reward_condition, stimulus_repetition, category_rep_group, within_condition_block_num) %>%
+    summarize(mean_correct_group = mean(mean_correct, na.rm = T),
+              se_correct = sd(mean_correct, na.rm = T)/sqrt(n()))  %>%
     filter(stimulus_repetition == 1)
 
 #plot
-correct_response_category_rep_plot <- ggplot(correct_response_category_rep, 
-                                aes(x = category_rep,
-                                    color = reward_condition,
-                                    y = group_mean_correct)) +
+correct_response_category_rep_plot <- ggplot() +
     facet_grid(cols = vars(within_condition_block_num)) +
-    geom_point() +
-    geom_line(aes(group = reward_condition)) +
-    geom_errorbar(aes(ymin = group_mean_correct - se_correct, ymax = group_mean_correct + se_correct), 
-                  width = .1) + 
+       geom_point(
+        data = correct_response_category_rep_sub,
+        aes(x = category_rep_group, color = reward_condition, y = mean_correct),
+        shape = 95,
+        size = 15,
+        alpha = .05
+    ) +
+    geom_point(
+        data = correct_response_category_rep,
+        aes(x = category_rep_group, y = mean_correct_group,
+        color = reward_condition),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = correct_response_category_rep,
+        aes(
+            x = category_rep_group,
+            y = mean_correct_group,
+            color = reward_condition,
+            ymin = mean_correct_group - se_correct,
+            ymax = mean_correct_group + se_correct),
+        width = .1
+    ) +
+    geom_line(
+        data = correct_response_category_rep,
+        aes(x = category_rep_group, y = mean_correct_group,
+        color = reward_condition, group = reward_condition),
+        linewidth = 1
+    ) +
     xlab("Category Repetition") +
     ylab("Correct Responses to 1st Stim.") +
-    scale_color_manual(values = c(color1, color2),
-                       name = "Block Condition") +
-    scale_fill_manual(values = c(color1, color2),
-                       name = "Block Condition") +
+        scale_color_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
     geom_hline(yintercept = .5, linetype = "dashed") +
-    mem_theme +
-    theme(legend.position = "none")
+    mem_theme  +
+    theme(legend.position = "top",
+          axis.text.x = element_text(angle = 52, hjust = 1))
 correct_response_category_rep_plot
 ```
 
@@ -435,14 +635,12 @@ win_stay_lose_shift <- learning_data %>%
     drop_na()
 
 #plot
-WSLS_plot <- ggplot(win_stay_lose_shift, aes(x = trial_group, y = mean_WSLS, fill = reward_condition)) +
+WSLS_plot <- ggplot(win_stay_lose_shift, aes(x = trial_group, y = mean_WSLS, fill = reward_condition), alpha = .5) +
     facet_grid(cols = vars(age_group)) +
-    geom_boxplot(data = filter(win_stay_lose_shift, trial_group == 1)) + 
-    geom_boxplot(data = filter(win_stay_lose_shift, trial_group == 2)) +
-    geom_boxplot(data = filter(win_stay_lose_shift, trial_group == 3)) +
+    geom_boxplot(data = filter(win_stay_lose_shift, trial_group == 1), alpha = .5) + 
+    geom_boxplot(data = filter(win_stay_lose_shift, trial_group == 2), alpha = .5) +
+    geom_boxplot(data = filter(win_stay_lose_shift, trial_group == 3), alpha = .5) +
     scale_fill_manual(values = c(color1, color2),
-                      name = "Block Condition") + 
-    scale_color_manual(values = c(color1, color2),
                       name = "Block Condition") + 
     geom_hline(yintercept = .5, linetype = "dashed") +
     xlab("Trial Group (17 trials)") +
@@ -454,13 +652,67 @@ WSLS_plot <- ggplot(win_stay_lose_shift, aes(x = trial_group, y = mean_WSLS, fil
 WSLS_plot 
 ```
 
+
+```{r plot WSLS by age group lines}
+
+win_stay_lose_shift_group <- win_stay_lose_shift %>%
+    group_by(age_group, reward_condition, trial_group) %>%
+    summarize(group_mean_WSLS = mean(mean_WSLS, na.rm = T),
+              se_WSLS = se(mean_WSLS)) %>%
+    drop_na()
+
+#plot
+wsls_lines_plot <- ggplot() +
+    facet_grid(cols = vars(age_group)) +
+       geom_point(
+        data = win_stay_lose_shift,
+        aes(x = factor(trial_group), color = reward_condition, y = mean_WSLS),
+        shape = 95,
+        size = 15,
+        alpha = .2
+    ) +
+    geom_point(
+        data = win_stay_lose_shift_group,
+        aes(x = factor(trial_group), 
+            y = group_mean_WSLS,
+            color = reward_condition),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = win_stay_lose_shift_group,
+        aes(
+            x = factor(trial_group),
+            y = group_mean_WSLS,
+            color = reward_condition,
+            ymin = group_mean_WSLS - se_WSLS,
+            ymax = group_mean_WSLS + se_WSLS),
+        width = .1
+    ) +
+    geom_line(
+        data = win_stay_lose_shift_group,
+        aes(x = factor(trial_group), 
+            y = group_mean_WSLS,
+            color = reward_condition, 
+            group = reward_condition),
+        linewidth = 1
+    ) +
+    xlab("Trial Group (17 Trials)") +
+    ylab("Category Win-Stay-Lose-Shift") +
+        scale_color_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    mem_theme  +
+    theme(legend.position = "top")
+wsls_lines_plot
+```
+
 ## Supplementary Figure: WSLS by block number
 ```{r WSLS plot with block number}
 
 #determine win-stay lose shift behavior across age group and blocks
 win_stay_lose_shift <- learning_data %>%
     filter(same_stim == 0) %>% #different stim only
-    mutate(trial_group = floor(learning_trial/10 + 50/51)) %>%
+    mutate(trial_group = floor(learning_trial/17 + 50/51)) %>%
     group_by(subject_id, age, age_group, reward_condition, trial_group, within_condition_block_num) %>%
     summarize(mean_WSLS = mean(WSLS, na.rm = T),
               se_WSLS = se(WSLS)) %>%
@@ -468,7 +720,7 @@ win_stay_lose_shift <- learning_data %>%
 
 #plot
 WSLS_plot <- ggplot(win_stay_lose_shift, aes(x = factor(within_condition_block_num), y = mean_WSLS, fill = reward_condition)) +
-    geom_boxplot(alpha = .7) + 
+    geom_boxplot(alpha = .5) + 
     scale_fill_manual(values = c(color1, color2),
                       name = "Block Condition") + 
     scale_color_manual(values = c(color1, color2),
@@ -481,15 +733,66 @@ WSLS_plot <- ggplot(win_stay_lose_shift, aes(x = factor(within_condition_block_n
 WSLS_plot 
 ```
 
+```{r plot WSLS by block number lines}
+
+win_stay_lose_shift_group <- win_stay_lose_shift %>%
+    group_by(within_condition_block_num, reward_condition, trial_group) %>%
+    summarize(group_mean_WSLS = mean(mean_WSLS, na.rm = T),
+              se_WSLS = se(mean_WSLS)) %>%
+    drop_na()
+
+#plot
+wsls_lines_plot <- ggplot() +
+    facet_grid(cols = vars(within_condition_block_num)) +
+       geom_point(
+        data = win_stay_lose_shift,
+        aes(x = factor(trial_group), color = reward_condition, y = mean_WSLS),
+        shape = 95,
+        size = 15,
+        alpha = .2
+    ) +
+    geom_point(
+        data = win_stay_lose_shift_group,
+        aes(x = factor(trial_group), 
+            y = group_mean_WSLS,
+            color = reward_condition),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = win_stay_lose_shift_group,
+        aes(
+            x = factor(trial_group),
+            y = group_mean_WSLS,
+            color = reward_condition,
+            ymin = group_mean_WSLS - se_WSLS,
+            ymax = group_mean_WSLS + se_WSLS),
+        width = .1
+    ) +
+    geom_line(
+        data = win_stay_lose_shift_group,
+        aes(x = factor(trial_group), 
+            y = group_mean_WSLS,
+            color = reward_condition, 
+            group = reward_condition),
+        linewidth = 1
+    ) +
+    xlab("Trial Group (17 Trials)") +
+    ylab("Category Win-Stay-Lose-Shift") +
+        scale_color_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    mem_theme  +
+    theme(legend.position = "top")
+wsls_lines_plot
+```
 
 ## Supplementary Figure: WSLS by block number and age group
 ```{r WSLS plot with block number and age group, fig.height = 10}
 
-
 #plot
 WSLS_plot <- ggplot(win_stay_lose_shift, aes(x = factor(trial_group), y = mean_WSLS, fill = reward_condition)) +
     facet_wrap(~age_group * factor(within_condition_block_num)) +
-    geom_boxplot(alpha = .7) + 
+    geom_boxplot(alpha = .5) + 
     scale_fill_manual(values = c(color1, color2),
                       name = "Block Condition") + 
     scale_color_manual(values = c(color1, color2),
@@ -763,15 +1066,13 @@ mem_delay_overall_data <- memory_data %>%
               max_delay = max(memory_delay, na.rm = T))
 pander(mem_delay_overall_data)
 
-mem_delay_data <- memory_data %>%
+mem_delay_dist <- memory_data %>%
     select(subject_id, age_group, memory_delay) %>%
     unique() %>%
-    group_by(age_group) %>%
-    summarize(mean_delay = mean(memory_delay, na.rm = T),
-              sd_delay = sd(memory_delay, na.rm = T),
-              min_delay = min(memory_delay, na.rm = T),
-              max_delay = max(memory_delay, na.rm = T))
-pander(mem_delay_data)
+    group_by(memory_delay) %>%
+    summarize(n = n()) %>%
+    drop_na()
+pander(mem_delay_dist)
 ```
 
 ## Supplementary Figure: AUC values by stimulus repetitions, block condition, age group
@@ -819,7 +1120,7 @@ stim_rep_auc_means <- stim_rep_AUCs %>%
               se_auc = se(AUC))
 
 stim_rep_auc_plot <- ggplot(stim_rep_AUCs, aes(x = stimulus_reps, fill = reward_condition, y = AUC)) +
-    geom_boxplot(alpha = .7) +
+    geom_boxplot(alpha = .5) +
     facet_grid(cols = vars(age_group)) +
     scale_fill_manual(values = c(color1, color2), name = "Block Condition") + 
     xlab("Number of Stimulus Repetitions") +
@@ -888,7 +1189,7 @@ participant_AUCs <- full_join(exemplar_AUCs, category_AUCs, by = c("subject_id",
 
 
 ## Figure 3A: AUC values by age group, memory specificity, block condition
-```{r auc plot, fig.height = 8}
+```{r auc plot, fig.height = 7, fig.width = 4.1}
 auc_overall_means <- participant_AUCs %>% 
     group_by(foil_type) %>%
     summarize(mean_auc = mean(AUC, na.rm = T),
@@ -904,7 +1205,7 @@ auc_means <- participant_AUCs %>%
 auc_plot <- ggplot(participant_AUCs) +
     facet_grid(cols = vars(age_group), rows = vars(foil_type)) +
         geom_hline(yintercept = .5, linetype = "dashed") +
-       geom_point(data = participant_AUCs, aes(x = reward_condition, color = foil_type, y = AUC), shape = 95, size = 20, alpha = .2) + 
+       geom_point(data = participant_AUCs, aes(x = reward_condition, color = foil_type, y = AUC), shape = 95, size = 15, alpha = .2) + 
     geom_point(data = auc_means, aes(x = reward_condition, y = mean_auc), color = "black", size = 2) +
     geom_errorbar(data = auc_means, aes(x = reward_condition, y = mean_auc, ymin = mean_auc - se_auc, ymax = mean_auc + se_auc), color = "black", width = .1) +
     geom_line(data = auc_means, aes(x = reward_condition, y = mean_auc, group = age_group), color = "black", linewidth = .5) +
@@ -913,7 +1214,7 @@ auc_plot <- ggplot(participant_AUCs) +
     ylab("Memory Performance (AUC)") +
     scale_y_continuous(limits = c(.3, 1), breaks = c(.3, .5, .7, .9)) +
     mem_theme +
-    theme(axis.text.x = element_text(angle = 50, hjust = 1),
+    theme(axis.text.x = element_text(angle = 52, hjust = 1),
           legend.position = "none")
 auc_plot
 ```
@@ -983,10 +1284,11 @@ tab_model_glmer(auc_delay_model.lmer)
 
 ```{r auc plot with delay}
 participant_AUCs_filtered <- participant_AUCs %>%
-     filter(memory_delay > 5 & memory_delay < 10)
+    drop_na() #%>%
+    # filter(memory_delay > 5 & memory_delay < 10)
 
 auc_plot <- ggplot(participant_AUCs_filtered, aes(x = as.factor(memory_delay), fill = foil_type, y = AUC)) +
-    geom_boxplot(alpha = .7) +
+    geom_boxplot(alpha = .5) +
     scale_fill_manual(values = c(color1, color2), name = "Memory Specificity") + 
     xlab("Memory Delay (Days)") +
     ylab("Memory Performance (AUC)") +
@@ -1032,12 +1334,13 @@ beta_ests$reward_condition <- factor(beta_ests$block_condition,
 #find means to add to plot
 beta_means <- beta_ests %>%
     group_by(reward_condition, abstraction, age_group) %>%
-    summarize(mean_est = mean(est, na.rm = T))
+    summarize(mean_est = mean(est, na.rm = T),
+              se_est = se(est))
 
 #plot
 beta_histogram <- ggplot(beta_ests, aes(x = est)) +
     facet_grid(rows = vars(abstraction), cols = vars(age_group)) + 
-    geom_histogram(position = "identity", color = 'black', aes(fill = reward_condition), alpha = .4) +
+    geom_histogram(position = "identity", color = 'black', aes(fill = reward_condition), alpha = .5) +
     geom_vline(data = beta_means, aes(xintercept = mean_est, color = reward_condition), linewidth = 2) + 
     xlab("Choice Weight Magnitude") +
     ylab("Number of Participants") +
@@ -1055,13 +1358,62 @@ beta_histogram
 #plot
 choice_weights_plot <- ggplot(beta_ests, aes(y = est, x = abstraction, fill = reward_condition)) +
     facet_grid(cols = vars(age_group)) + 
-    geom_boxplot() +
+    geom_boxplot(alpha = .5) +
     xlab("Choice Weight Magnitude") +
     ylab("Estimate") +
     scale_fill_manual(values = c(color1, color2), name = "Block Condition") +
     mem_theme +
-    theme(legend.position = "top")
+    theme(legend.position = "top", 
+          legend.text = element_text(face = "plain"),
+          legend.title = element_text(face = "plain"))
 choice_weights_plot
+```
+
+```{r choice weights lines fig, fig.height = 6}
+
+#plot
+choice_weights_lines_plot <- ggplot() +
+    facet_grid(cols = vars(age_group)) +
+       geom_point(
+        data = beta_ests,
+        aes(x = reward_condition, color = abstraction, y = est),
+        shape = 95,
+        size = 15,
+        alpha = .2
+    ) +
+    geom_point(
+        data = beta_means,
+        aes(x = reward_condition, 
+            y = mean_est,
+            color = abstraction),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = beta_means,
+        aes(
+            x = reward_condition,
+            y = mean_est,
+            color = abstraction,
+            ymin = mean_est - se_est,
+            ymax = mean_est + se_est),
+        width = .1
+    ) +
+    geom_line(
+        data = beta_means,
+        aes(x = reward_condition, 
+            y = mean_est,
+            color = abstraction, 
+            group = abstraction),
+        linewidth = 1
+    ) +
+    xlab("Block Condition") +
+    ylab("Estimate") +
+        scale_color_manual(values = c(color1, color2),
+                       name = "Choice Weight") + 
+    mem_theme  +
+    theme(legend.position = "top",
+          axis.text.x = element_text(angle = 52, hjust = 1))
+choice_weights_lines_plot
 ```
 
 ### Presentation figure: Choice weights without age
@@ -1215,6 +1567,7 @@ beta_ests_wide_cat_pred$beta_e_scaled <- scale_this(beta_ests_wide_cat_pred$beta
 beta.tradoff.model.exemp_pred <- lm(beta_e_scaled ~ beta_c_scaled * age_scaled,
                            data = beta_ests_wide_exemp_pred)
 summary(beta.tradoff.model.exemp_pred)
+tab_model_glmer(beta.tradoff.model.exemp_pred)
 
 #marginal positive relation with beta_c_scaled
 #positive effect of age
@@ -1292,9 +1645,13 @@ beta_points_model3 <- lm(total_points ~ est, data = beta_ests_points_c_e)
 beta_points_model4 <- lm(total_points ~ est, data = beta_ests_points_e_e)
 
 summary(beta_points_model1) #sig
+tab_model_glmer(beta_points_model1)
 summary(beta_points_model2) #sig
+tab_model_glmer(beta_points_model2)
 summary(beta_points_model3) #not sig
+tab_model_glmer(beta_points_model3)
 summary(beta_points_model4) #sig
+tab_model_glmer(beta_points_model4)
 ```
 
 ### Figure 2D: Effect of choice weights on points earned
@@ -1308,7 +1665,8 @@ points_beta_plot <- ggplot(beta_ests_points, aes(x = est, y = total_points, colo
     ylab("Total Points Earned") +
     xlab("Choice Weight Magnitude") +
     mem_theme +
-    theme(legend.position = "top")
+    theme(legend.position = "top",
+          legend.text = element_text(face = "plain"))
 points_beta_plot
 ```
 
@@ -1465,7 +1823,7 @@ tab_model_glmer(auc_beta_points_model.lmer)
 ```
 
 ### Figure 3B: AUC by performance group and reward condition
-```{r auc points participant plot, fig.height = 8, fig.width = 6}
+```{r auc points participant plot, fig.height = 7, fig.width = 4}
 
 auc_beta_points <- auc_beta_points %>%
     group_by(reward_condition) %>%
@@ -1495,7 +1853,7 @@ auc_points_plot <- ggplot(auc_beta_points) +
         data = auc_beta_points,
         aes(x = reward_condition, color = abstraction, y = AUC),
         shape = 95,
-        size = 20,
+        size = 15,
         alpha = .2
     ) +
     geom_point(
@@ -1526,7 +1884,7 @@ auc_points_plot <- ggplot(auc_beta_points) +
     ylab("Memory Performance (AUC)") +
     scale_y_continuous(limits = c(.3, 1), breaks = c(.3, .5, .7, .9)) +
     mem_theme +
-    theme(axis.text.x = element_text(angle = 50, hjust = 1),
+    theme(axis.text.x = element_text(angle = 52, hjust = 1),
           legend.position = "none")
 auc_points_plot
 ```
@@ -1687,7 +2045,9 @@ plot_model(auc_beta_cat_model.lmer, type = "pred",
                        labels = c("~ 11 years old",
                                   "~ 16 years old",
                                   "~ 21 years old"
-                                  )) 
+                                  )) +
+    xlab("") +
+    ylab("")
 ```
 
 ### Figure (for presentation): Category and exemplar memory by exemplar choice weights
@@ -1766,6 +2126,8 @@ q_init_model <- lm(q_init ~ age_scaled, data = param_ests)
 pander(summary(q_init_model))
 
 #significant effect of age
+
+tab_model_glmer(q_init_model)
 ```
 
 ## Supplementary Figure: Initial Q values by age
@@ -1789,6 +2151,8 @@ alpha_model <- lm(alpha ~ age_scaled, data = param_ests)
 pander(summary(alpha_model))
 
 #no effect of age
+
+tab_model_glmer(alpha_model)
 ```
 
 
