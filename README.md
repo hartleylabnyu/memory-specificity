@@ -7,7 +7,7 @@ We conducted two multi-session online experiments. In the first session of each 
 The tasks were coded in jsPsych version 6.3.1 and administered online via Pavlovia.
 
 ## Data
-Cleaned data and parameter estimates from our fitted reinforcement-learning models can be found in the data folders within each experiment. 
+Cleaned data and parameter estimates from our fitted reinforcement-learning models can be found in the data folders within each experiment. Anonymized, raw data files are in the 'raw' subfolder. 
 
 ## Analysis and computational modeling code
 Data was analyzed in R using the R markdown analysis scripts found in the analysis folders. 
