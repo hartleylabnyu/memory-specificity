@@ -2156,4 +2156,322 @@ tab_model_glmer(alpha_model)
 ```
 
 
+# Model and parameter recoverability
+```{r model recoverability, fig.width = 4.5, fig.height = 4}
+
+#read in data
+conf_beta <- read_csv('analysis/rl_modeling_code/recov/model_recov_beta.csv')
+inv_beta <- read_csv('analysis/rl_modeling_code/recov/model_inv_beta.csv')
+conf_q <- read_csv('analysis/rl_modeling_code/recov/model_recov_q.csv')
+inv_q <- read_csv('analysis/rl_modeling_code/recov/model_inv_q.csv')
+conf_cf <- read_csv('analysis/rl_modeling_code/recov/model_recov_cf.csv')
+inv_cf <- read_csv('analysis/rl_modeling_code/recov/model_inv_cf.csv')
+
+#plot matrices for beta
+beta_conf_plot <-
+    ggplot(conf_beta, aes(x = sim_model, y = fit_model, alpha = XP)) +
+    geom_tile(fill = color3) +
+    xlab("Simulated Model") +
+    ylab("Recovered Model") +
+    geom_text(aes(label = round(XP, 2)), alpha = 1) +
+    mem_theme +
+    theme(legend.position = "none",
+          axis.text.y = element_text(angle = 90)) +
+    annotate(
+        "rect",
+        xmin = 2.5,
+        xmax = 3.5,
+        ymin = .5,
+        ymax = 3.5,
+        colour = "black",
+        fill = "transparent",
+        size = 1
+    ) +
+    scale_x_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('1 $\\beta$')),
+                                  parse(text = TeX('2 $\\beta$')),
+                                  parse(text = TeX('4 $\\beta$')))) +
+    scale_y_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('1 $\\beta$')),
+                                  parse(text = TeX('2 $\\beta$')),
+                                  parse(text = TeX('4 $\\beta$'))))
+
+beta_conf_plot
+
+beta_inv_plot <-
+    ggplot(inv_beta, aes(x = fit_model, y = sim_model, alpha = XP)) +
+    geom_tile(fill = color3) +
+    xlab("Recovered Model") +
+    ylab("Simulated Model") +
+    geom_text(aes(label = round(XP, 2)), alpha = 1) +
+    mem_theme +
+    theme(legend.position = "none",
+          axis.text.y = element_text(angle = 90)) +
+    annotate(
+        "rect",
+        xmin = 2.5,
+        xmax = 3.5,
+        ymin = .5,
+        ymax = 3.5,
+        colour = "black",
+        fill = "transparent",
+        size = 1
+    ) +
+    scale_x_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('1 $\\beta$')),
+                                  parse(text = TeX('2 $\\beta$')),
+                                  parse(text = TeX('4 $\\beta$')))) +
+    scale_y_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('1 $\\beta$')),
+                                  parse(text = TeX('2 $\\beta$')),
+                                  parse(text = TeX('4 $\\beta$'))))
+beta_inv_plot
+
+
+#plot matrices for q
+q_conf_plot <-
+    ggplot(conf_q, aes(x = sim_model, y = fit_model, alpha = XP)) +
+    geom_tile(fill = color3) +
+    xlab("Simulated Model") +
+    ylab("Recovered Model") +
+    geom_text(aes(label = round(XP, 2)), alpha = 1) +
+    mem_theme +
+    theme(legend.position = "none",
+          axis.text.y = element_text(angle = 90)) +
+    annotate(
+        "rect",
+        xmin = 1.5,
+        xmax = 2.5,
+        ymin = .5,
+        ymax = 3.5,
+        colour = "black",
+        fill = "transparent",
+        size = 1
+    ) +
+    scale_x_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('$\\q_0$ = 0')),
+                                  parse(text = TeX('1 $\\q_0$')),
+                                  parse(text = TeX('2 $\\q_0$')))) +
+    scale_y_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('$\\q_0$ = 0')),
+                                  parse(text = TeX('1 $\\q_0$')),
+                                  parse(text = TeX('2 $\\q_0$'))))
+    q_conf_plot
+
+q_inv_plot <-
+    ggplot(inv_q, aes(x = fit_model, y = sim_model, alpha = XP)) +
+    geom_tile(fill = color3) +
+    xlab("Recovered Model") +
+    ylab("Simulated Model") +
+    geom_text(aes(label = round(XP, 2)), alpha = 1) +
+    mem_theme +
+    theme(legend.position = "none",
+          axis.text.y = element_text(angle = 90)) +
+    annotate(
+        "rect",
+        xmin = 1.5,
+        xmax = 2.5,
+        ymin = .5,
+        ymax = 3.5,
+        colour = "black",
+        fill = "transparent",
+        size = 1
+    ) +
+    scale_x_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('$\\q_0$ = 0')),
+                                  parse(text = TeX('1 $\\q_0$')),
+                                  parse(text = TeX('2 $\\q_0$')))) +
+    scale_y_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('$\\q_0$ = 0')),
+                                  parse(text = TeX('1 $\\q_0$')),
+                                  parse(text = TeX('2 $\\q_0$'))))
+q_inv_plot
+
+
+
+#plot matrices for cf
+cf_conf_plot <-
+    ggplot(conf_cf, aes(x = sim_model, y = fit_model, alpha = XP)) +
+    geom_tile(fill = color3) +
+    xlab("Simulated Model") +
+    ylab("Recovered Model") +
+    geom_text(aes(label = round(XP, 2)), alpha = 1) +
+    mem_theme +
+    theme(legend.position = "none",
+          axis.text.y = element_text(angle = 90)) +
+    annotate(
+        "rect",
+        xmin = .5,
+        xmax = 1.5,
+        ymin = .5,
+        ymax = 3.5,
+        colour = "black",
+        fill = "transparent",
+        size = 1
+    ) +
+    scale_x_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('$\\alpha_{cf}$ = $\\alpha_{choice}$')),
+                                  parse(text = TeX('$\\alpha_{cf}$, $\\alpha_{choice}$')),
+                                  parse(text = TeX('$\\alpha_{cf}$ = 0')))) +
+    scale_y_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('$\\alpha_{cf}$ = $\\alpha_{choice}$')),
+                                  parse(text = TeX('$\\alpha_{cf}$, $\\alpha_{choice}$')),
+                                  parse(text = TeX('$\\alpha_{cf}$ = 0'))))
+cf_conf_plot
+
+cf_inv_plot <-
+    ggplot(inv_cf, aes(x = fit_model, y = sim_model, alpha = XP)) +
+    geom_tile(fill = color3) +
+    xlab("Recovered Model") +
+    ylab("Simulated Model") +
+    geom_text(aes(label = round(XP, 2)), alpha = 1) +
+    mem_theme +
+    theme(legend.position = "none",
+          axis.text.y = element_text(angle = 90)) +
+    annotate(
+        "rect",
+        xmin = .5,
+        xmax = 1.5,
+        ymin = .5,
+        ymax = 3.5,
+        colour = "black",
+        fill = "transparent",
+        size = 1
+    ) +
+    scale_x_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('$\\alpha_{cf}$ = $\\alpha_{choice}$')),
+                                  parse(text = TeX('$\\alpha_{cf}$, $\\alpha_{choice}$')),
+                                  parse(text = TeX('$\\alpha_{cf}$ = 0')))) +
+    scale_y_continuous(breaks = c(1, 2, 3),
+                       labels = c(parse(text = TeX('$\\alpha_{cf}$ = $\\alpha_{choice}$')),
+                                  parse(text = TeX('$\\alpha_{cf}$, $\\alpha_{choice}$')),
+                                  parse(text = TeX('$\\alpha_{cf}$ = 0'))))
+cf_inv_plot
+
+```
+
+## Parameter recoverability (FourB_oneA_oneQ)
+```{r param recoverability}
+recov_ests <- read_csv("analysis/rl_modeling_code/recov/fourB_oneA_oneQ_param_recov.csv") %>%
+    rownames_to_column("sim_num") %>%
+    pivot_longer(sim_beta_c_cCond:sim_q_init,
+                 values_to = "sim_val",
+                 names_to = "sim_param",
+                 names_prefix = "sim_") %>%
+    pivot_longer(fit_beta_c_cCond:fit_q_init,
+                 values_to = "fit_val",
+                 names_to = "fit_param",
+                 names_prefix = "fit_") %>%
+    mutate(same_param = case_when(sim_param == fit_param ~ 1,
+                                  sim_param != fit_param ~ 0)) %>%
+    filter(same_param == 1) %>%
+    select(sim_num, param = sim_param, sim_val, fit_val)
+
+recov_ests$param <- factor(recov_ests$param, labels=c(
+    'alpha'=parse(text=TeX(' $\\alpha$')),
+    'beta_c_cCond' =parse(text=TeX('Category $\\beta_c$')),
+    'beta_c_eCond' =parse(text=TeX('Exemplar $\\beta_c$')),
+    'beta_e_cCond' =parse(text=TeX('Category $\\beta_e$')),
+    'beta_e_eCond' =parse(text=TeX('Exemplar $\\beta_e$')),
+    'q_init' =parse(text=TeX('$\\Q_0$'))))
+    
+
+#plot
+param_recov_plot <- ggplot(recov_ests, aes(x = sim_val, y = fit_val)) +
+    facet_wrap(~param, scales = "free", labeller=label_parsed) +
+    geom_point(size = .1, alpha = .05, color = color3) + 
+    geom_smooth(method = "lm", color = "black", fill = "black") +
+    stat_cor(method = "pearson", aes(label = after_stat(r.label))) +
+    xlab("Simulated Parameter Value") +
+    ylab("Fitted Parameter Value") +
+    mem_theme +
+    theme(plot.margin = margin(.5, .5, .5, .5, "cm"))
+ param_recov_plot                
+
+```
+
+## Parameter recoverability (FourB_oneA_oneQ) - low values of Beta_E only
+```{r param recoverability filter high beta e}
+recov_ests <- read_csv("analysis/rl_modeling_code/recov/fourB_oneA_oneQ_param_recov.csv") %>%
+    filter(sim_beta_e_eCond < 1) %>%
+    filter(sim_beta_e_cCond < 1) %>%
+    rownames_to_column("sim_num") %>%
+    pivot_longer(sim_beta_c_cCond:sim_q_init,
+                 values_to = "sim_val",
+                 names_to = "sim_param",
+                 names_prefix = "sim_") %>%
+    pivot_longer(fit_beta_c_cCond:fit_q_init,
+                 values_to = "fit_val",
+                 names_to = "fit_param",
+                 names_prefix = "fit_") %>%
+    mutate(same_param = case_when(sim_param == fit_param ~ 1,
+                                  sim_param != fit_param ~ 0)) %>%
+    filter(same_param == 1) %>%
+    select(sim_num, param = sim_param, sim_val, fit_val) 
+
+recov_ests$param <- factor(recov_ests$param, labels=c(
+    'alpha'=parse(text=TeX(' $\\alpha$')),
+    'beta_c_cCond' =parse(text=TeX('Category $\\beta_c$')),
+    'beta_c_eCond' =parse(text=TeX('Exemplar $\\beta_c$')),
+    'beta_e_cCond' =parse(text=TeX('Category $\\beta_e$')),
+    'beta_e_eCond' =parse(text=TeX('Exemplar $\\beta_e$')),
+    'q_init' =parse(text=TeX('$\\Q_0$'))))
+    
+
+#plot
+param_recov_plot <- ggplot(recov_ests, aes(x = sim_val, y = fit_val)) +
+    facet_wrap(~param, scales = "free", labeller=label_parsed) +
+    geom_point(size = .1, alpha = .05, color = color3) + 
+    geom_smooth(method = "lm", color = "black", fill = "black") +
+    stat_cor(method = "pearson", aes(label = after_stat(r.label))) +
+    xlab("Simulated Parameter Value") +
+    ylab("Fitted Parameter Value") +
+    mem_theme +
+    theme(plot.margin = margin(.5, .5, .5, .5, "cm")) +
+    ggtitle(parse(text=TeX('$\\beta_e < 1$')))
+ param_recov_plot                
+
+```
+
+## Parameter recoverability (FourB_oneA_oneQ) - high values of Beta_E only
+```{r param recoverability filter low beta e}
+recov_ests <- read_csv("analysis/rl_modeling_code/recov/fourB_oneA_oneQ_param_recov.csv") %>%
+    filter(sim_beta_e_eCond > 1) %>%
+    filter(sim_beta_e_cCond > 1) %>%
+    rownames_to_column("sim_num") %>%
+    pivot_longer(sim_beta_c_cCond:sim_q_init,
+                 values_to = "sim_val",
+                 names_to = "sim_param",
+                 names_prefix = "sim_") %>%
+    pivot_longer(fit_beta_c_cCond:fit_q_init,
+                 values_to = "fit_val",
+                 names_to = "fit_param",
+                 names_prefix = "fit_") %>%
+    mutate(same_param = case_when(sim_param == fit_param ~ 1,
+                                  sim_param != fit_param ~ 0)) %>%
+    filter(same_param == 1) %>%
+    select(sim_num, param = sim_param, sim_val, fit_val) 
+
+recov_ests$param <- factor(recov_ests$param, labels=c(
+    'alpha'=parse(text=TeX(' $\\alpha$')),
+    'beta_c_cCond' =parse(text=TeX('Category $\\beta_c$')),
+    'beta_c_eCond' =parse(text=TeX('Exemplar $\\beta_c$')),
+    'beta_e_cCond' =parse(text=TeX('Category $\\beta_e$')),
+    'beta_e_eCond' =parse(text=TeX('Exemplar $\\beta_e$')),
+    'q_init' =parse(text=TeX('$\\Q_0$'))))
+
+#plot
+param_recov_plot <- ggplot(recov_ests, aes(x = sim_val, y = fit_val)) +
+    facet_wrap(~param, scales = "free", labeller=label_parsed) +
+    geom_point(size = .1, alpha = .05, color = color3) + 
+    geom_smooth(method = "lm", color = "black", fill = "black") +
+    stat_cor(method = "pearson", aes(label = after_stat(r.label))) +
+    xlab("Simulated Parameter Value") +
+    ylab("Fitted Parameter Value") +
+    mem_theme +
+    theme(plot.margin = margin(.5, .5, .5, .5, "cm")) +
+    ggtitle(parse(text=TeX('$\\beta_e > 1$')))
+ param_recov_plot                
+```
+
 
