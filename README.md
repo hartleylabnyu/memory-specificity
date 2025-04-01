@@ -1,5 +1,5 @@
-# Reinforcement learning increasingly shapes memory specificity from childhood to adulthood
-Tasks, anonymized data, and analysis code for: *Reinforcement learning increasingly shapes memory specificity from childhood to adulthood*
+# Reinforcement learning increasingly relates to memory specificity from childhood to adulthood
+Tasks, anonymized data, and analysis code for: Nussenbaum, K. & Hartley, C.A. (in press). [Reinforcement learning increasingly relates to memory specificity from childhood to adulthood.](https://osf.io/preprints/psyarxiv/utsxn) *Nature Communications*.
 
 ## Tasks
 We conducted two multi-session online experiments. In the first session of each experiment, participants completed a reinforcement-learning task in which either specific exemplars or broader stimulus categories determined the rewards associated with different actions. In the second session, which was administered one week later, participants completed a memory test in which we probed the specificity of their memories for the stimuli encountered during learning.
