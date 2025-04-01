@@ -57,6 +57,18 @@ scale_this <- function(x){
 se <- function(x){
     sd(x, na.rm = T)/sqrt(length(x))
 }
+
+tab_model_glmer <- function(model_name){
+    tab_model(model_name,
+          digits = 4,
+          show.intercept = F,
+          show.est = T,
+          show.ci = .95,
+          show.se = F,
+          show.stat = F,
+          show.p = F,
+          string.se = "SE")
+}
 ```
 
 ```{r plot theme}
@@ -662,15 +674,7 @@ auc_beta_exemplar_model.lmer <- mixed(AUC ~ age_scaled * beta_scaled * abstracti
                                   data = auc_beta_exemplar,
                                   return = "merMod")
 
-tab_model(auc_beta_exemplar_model.lmer,
-          digits = 4,
-          show.intercept = F,
-          show.est = T,
-          show.ci = F,
-          show.se = T,
-          show.stat = F,
-          show.p = F,
-          string.se = "SE")
+tab_model_glmer(auc_beta_exemplar_model.lmer)
 ```
 
 

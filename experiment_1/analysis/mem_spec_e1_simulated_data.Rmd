@@ -241,6 +241,31 @@ correct_response_plot <- ggplot(
 correct_response_plot
 ```
 
+```{r correct response boxplot}
+
+#plot
+correct_response_plot <- ggplot(
+    correct_response_summary_sub,
+    aes(x = reward_condition, fill = model, y = mean_correct)
+) +
+    facet_grid(cols = vars(age_group)) +
+    geom_boxplot(alpha = .5) +
+    xlab("Block Condition") +
+    ylab("Proportion of Correct Responses") +
+    scale_fill_manual(
+        values = c('gray30', color3, color4, color5),
+        labels = c("empirical", expression(four ~ beta, two ~
+                                               beta, one ~ beta)),
+        name = "Model"
+    ) +
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    mem_theme +
+    theme(legend.position = "top",
+          axis.text.x = element_text(angle = 35, hjust = 1))
+correct_response_plot
+
+
+```
 
 ## Plot: Optimal responses across trials, age groups, and reward conditions (winning model only)
 ```{r plot optimal responses by trial age group and reward condition}
@@ -258,7 +283,6 @@ correct_response_summary <- correct_response_summary_sub  %>%
     summarize(group_mean_correct = mean(mean_correct, na.rm = T),
               se_correct = se(mean_correct))
 
-#group means
 correct_response_plot <- ggplot(correct_response_summary, 
                                     aes(x = stimulus_repetition, 
                                         color = reward_condition,
@@ -279,8 +303,28 @@ correct_response_plot <- ggplot(correct_response_summary,
 correct_response_plot
 ```
 
+```{r optimal responses boxplot}
 
-## Plot: Generalization (response to first appearance of each stimulus)by age group and reward condition 
+correct_response_plot <- ggplot(correct_response_summary_sub, 
+                                    aes(x = factor(stimulus_repetition), 
+                                        fill = reward_condition,
+                                        y = mean_correct)) +
+    facet_grid(cols = vars(age_group), rows = vars(model)) +
+    geom_boxplot(alpha = .5) + 
+    xlab("Stimulus Repetition") +
+    ylab("Proportion of Correct Responses") +
+    scale_fill_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    scale_y_continuous(breaks = c(.5, .7, .9)) +
+    mem_theme +
+    theme(legend.position = "top")
+correct_response_plot
+
+```
+
+
+## Plot: Generalization (response to first appearance of each stimulus) by age group and reward condition 
 ```{r plot generalization by age group and reward condition}
 
 # add category to learning data frame
@@ -334,6 +378,41 @@ correct_response_generalization_plot <- ggplot(
           axis.text.x = element_text(angle = 35, hjust = 1)) +
     coord_cartesian(ylim = c(.4, .8))
 correct_response_generalization_plot
+```
+
+```{r correct response generalization boxplot}
+
+# determine correct responses as a function of stimulus rep and category rep
+correct_response_category_rep_sub <- sim_learning_data %>%
+    filter(block_condition == "2" | cat_type != "neutral") %>%
+    filter(rt > 0) %>%
+    group_by(subject_id, reward_condition, stimulus_repetition, age_group, model) %>%
+    summarize(mean_correct = mean(correct_response_made, na.rm = T),
+              se_correct = se(correct_response_made))  %>%
+    filter(stimulus_repetition == 1)
+
+#plot
+correct_response_generalization_plot <- ggplot(
+    correct_response_category_rep_sub,
+    aes(x = reward_condition, fill = model, y = mean_correct)
+) +
+    facet_grid(cols = vars(age_group)) +
+    geom_boxplot(alpha = .5) + 
+    xlab("Block Condition") +
+    ylab("Correct Responses to 1st Stim.") +
+    scale_fill_manual(
+        values = c('gray30', color3, color4, color5),
+        name = "Model",
+        labels = c("empirical", expression(four ~ beta, two ~
+                                               beta, one ~ beta))
+    ) +
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    mem_theme +
+    theme(legend.position = "top",
+          axis.text.x = element_text(angle = 35, hjust = 1))
+correct_response_generalization_plot
+
+
 ```
 
 ## Plot: Category WSLS across age groups and reward conditions
@@ -419,6 +498,27 @@ WSLS_simple_plot <- ggplot(win_stay_lose_shift_means,
 WSLS_simple_plot 
 ```
 
+```{r wsls boxplot}
+
+#plot
+WSLS_boxplot <- ggplot(win_stay_lose_shift_sub_means,
+                           aes(x = reward_condition, y = mean_sub_WSLS, fill = model)) +
+    facet_grid(cols = vars(age_group)) +
+    geom_boxplot(alpha = .5) +
+    scale_fill_manual(
+        values = c('gray30', color3, color4, color5),
+        labels = c("empirical", expression(four ~ beta, two ~
+                                               beta, one ~ beta)),
+        name = "Model"
+    ) +
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    xlab("Block Condition") +
+    ylab("Category WSLS") +
+    mem_theme +
+    theme(legend.position = "top",
+          axis.text.x = element_text(angle = 35, hjust = 1))
+WSLS_boxplot 
+```
 
 
 ## Plot generalization (winning model only)
@@ -452,6 +552,38 @@ correct_response_category_rep_plot <- ggplot(correct_response_category_rep,
 correct_response_category_rep_plot
 ```
 
+```{r generalization boxplot}
+
+correct_response_category_rep <- sim_learning_data %>%
+    filter(model %in% c('empirical', 'fourB_oneQ')) %>%
+    filter(block_condition == "2" | cat_type != "neutral") %>%
+    filter(rt > 0) %>%
+     mutate(category_rep_group = case_when(category_rep < 6 ~ "1 - 5",
+                                          category_rep > 5 & category_rep < 12 ~ "6 - 11",
+                                          category_rep > 11 ~ "12 - 17")) %>%
+    group_by(subject_id, reward_condition, category_rep_group, stimulus_repetition, age_group, model) %>%
+    
+    summarize(group_mean_correct = mean(correct_response_made, na.rm = T),
+              se_correct = se(correct_response_made))  %>%
+    filter(stimulus_repetition == 1)
+
+correct_response_category_rep$category_rep_group <- factor(correct_response_category_rep$category_rep_group, levels = c("1 - 5", "6 - 11", "12 - 17"))
+
+correct_response_category_rep_plot <- ggplot(correct_response_category_rep, 
+                                aes(x = category_rep_group,
+                                    fill = reward_condition,
+                                    y = group_mean_correct)) +
+    facet_grid(cols = vars(age_group), rows = vars(model)) +
+    geom_boxplot(alpha = .5) +
+    xlab("Category Repetition") +
+    ylab("Correct Responses to 1st Stim.") +
+    scale_fill_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    mem_theme  +
+    theme(legend.position = "top")
+correct_response_category_rep_plot
+```
 
 ## WSLS (winning model only)
 ```{r wsls}
@@ -469,9 +601,9 @@ win_stay_lose_shift_sub_means <- sim_wsls_data %>%
 #plot
 WSLS_plot <- ggplot(win_stay_lose_shift_sub_means, aes(x = trial_group, y = mean_sub_WSLS, fill = reward_condition)) +
     facet_grid(cols = vars(age_group), rows = vars(model)) +
-    geom_boxplot(data = filter(win_stay_lose_shift_sub_means, trial_group == 1)) + 
-    geom_boxplot(data = filter(win_stay_lose_shift_sub_means,  trial_group == 2)) +
-    geom_boxplot(data = filter(win_stay_lose_shift_sub_means,  trial_group == 3)) +
+    geom_boxplot(data = filter(win_stay_lose_shift_sub_means, trial_group == 1), alpha = .5) + 
+    geom_boxplot(data = filter(win_stay_lose_shift_sub_means,  trial_group == 2), alpha = .5) +
+    geom_boxplot(data = filter(win_stay_lose_shift_sub_means,  trial_group == 3), alpha = .5) +
     scale_fill_manual(values = c(color1, color2),
                       name = "Block Condition") + 
     scale_color_manual(values = c(color1, color2),

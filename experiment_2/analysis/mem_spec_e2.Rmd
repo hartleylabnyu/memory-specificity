@@ -35,6 +35,7 @@ font-size: 18px;
 knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = T)
 knitr::opts_chunk$set(fig.path = "figures/")
 knitr::opts_chunk$set(fig.height = 4, dpi = 600)
+knitr::opts_chunk$set(dev = 'svg')
 knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 ```
 
@@ -63,8 +64,8 @@ tab_model_glmer <- function(model_name){
           digits = 4,
           show.intercept = F,
           show.est = T,
-          show.ci = F,
-          show.se = T,
+          show.ci = .95,
+          show.se = F,
           show.stat = F,
           show.p = F,
           string.se = "SE")
@@ -213,6 +214,63 @@ correct_response_plot <- ggplot(correct_response_summary,
 correct_response_plot
 ```
 
+```{r plot learning across age groups lines, fig.height=5}
+
+# Plot correct response as a function of reward condition and stimulus repetition 
+correct_response_summary_sub <- learning_data %>%
+    group_by(reward_condition, stimulus_repetition, subject_id, age_group) %>%
+    summarize(mean_correct = mean(correct_response_made, na.rm = T))
+
+correct_response_summary <- correct_response_summary_sub  %>%
+    group_by(reward_condition, stimulus_repetition, age_group) %>%
+    summarize(group_mean_correct = mean(mean_correct, na.rm = T),
+              se_correct = se(mean_correct))
+
+#group means
+correct_response_plot <- ggplot() +
+    facet_grid(cols = vars(age_group)) +
+       geom_point(
+        data = correct_response_summary_sub,
+        aes(x = factor(stimulus_repetition), color = reward_condition, y = mean_correct),
+        shape = 95,
+        size = 10,
+        alpha = .2
+    ) +
+    geom_point(
+        data = correct_response_summary,
+        aes(x = factor(stimulus_repetition), 
+            y = group_mean_correct,
+            color = reward_condition),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = correct_response_summary,
+        aes(
+            x = factor(stimulus_repetition),
+            y = group_mean_correct,
+            color = reward_condition,
+            ymin = group_mean_correct - se_correct,
+            ymax = group_mean_correct + se_correct),
+        width = .1
+    ) +
+    geom_line(
+        data = correct_response_summary,
+        aes(x = factor(stimulus_repetition), 
+            y = group_mean_correct,
+            color = reward_condition, 
+            group = reward_condition),
+        linewidth = 1
+    ) +
+    xlab("Stimulus Repetition") +
+    ylab("Proportion of Correct Responses") +
+        scale_color_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
+    geom_hline(yintercept = .33, linetype = "dashed") +
+    mem_theme  +
+    theme(legend.position = "top")
+correct_response_plot
+```
+
 ## Supplementary Figure:  Correct response by block condition and block number 
 ```{r plot learning by block number}
 
@@ -238,10 +296,66 @@ correct_response_plot <- ggplot(correct_response_summary_sub,
 correct_response_plot
 ```
 
+```{r plot learning by block number lines, fig.height=5}
 
+# Plot correct response as a function of reward condition and stimulus repetition 
+correct_response_summary_sub <- learning_data %>%
+    filter(rt > 0) %>%
+    group_by(reward_condition, stimulus_repetition, subject_id, within_condition_block_num) %>%
+    summarize(mean_correct = mean(correct_response_made, na.rm = T))
+
+correct_response_summary <- correct_response_summary_sub  %>%
+    group_by(reward_condition, stimulus_repetition, within_condition_block_num) %>%
+    summarize(group_mean_correct = mean(mean_correct, na.rm = T),
+              se_correct = se(mean_correct))
+
+#plot
+learning_lines_plot <- ggplot() +
+    facet_grid(cols = vars(within_condition_block_num)) +
+       geom_point(
+        data = correct_response_summary_sub,
+        aes(x = factor(stimulus_repetition), color = reward_condition, y = mean_correct),
+        shape = 95,
+        size = 10,
+        alpha = .2
+    ) +
+    geom_point(
+        data = correct_response_summary,
+        aes(x = factor(stimulus_repetition), 
+            y = group_mean_correct,
+            color = reward_condition),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = correct_response_summary,
+        aes(
+            x = factor(stimulus_repetition),
+            y = group_mean_correct,
+            color = reward_condition,
+            ymin = group_mean_correct - se_correct,
+            ymax = group_mean_correct + se_correct),
+        width = .1
+    ) +
+    geom_line(
+        data = correct_response_summary,
+        aes(x = factor(stimulus_repetition), 
+            y = group_mean_correct,
+            color = reward_condition, 
+            group = reward_condition),
+        linewidth = 1
+    ) +
+    xlab("Stimulus Repetition") +
+    ylab("Proportion of Correct Responses") +
+        scale_color_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    mem_theme  +
+    theme(legend.position = "top")
+learning_lines_plot
+```
 
 ## Figure 5B: Generalization by block condition, category repetition, age group
-```{r plot generalization, fig.width = 6}
+```{r generalization data processing}
 
 # add category to learning data frame
 learning_data <- learning_data %>%
@@ -252,13 +366,15 @@ learning_data <- learning_data %>%
     separate(image,
              into = c("category", NA),
              sep = "([123456])",
-             remove=FALSE)
+             remove=FALSE) 
 
 # determine category repetition number
 learning_data <- learning_data %>%
     group_by(subject_id, task_block, category, age_group) %>%
     mutate(category_rep = rank(learning_trial))
+```
 
+```{r plot generalization, fig.width = 6}
 # determine correct responses as a function of stimulus rep and category rep
 correct_response_category_rep <- learning_data %>%
     mutate(category_rep_recoded = case_when(category_rep < 7 ~ category_rep,
@@ -293,6 +409,131 @@ correct_response_category_rep_plot <- ggplot(correct_response_category_rep,
 correct_response_category_rep_plot
 ```
 
+```{r plot generalization by age group lines, fig.height=5}
+
+# determine correct responses as a function of stimulus rep and category rep
+correct_response_category_rep_sub <- learning_data %>%
+    filter(rt > 0) %>%
+    mutate(category_rep_group = case_when(category_rep < 3 ~ "1 - 2",
+                                          category_rep > 2 & category_rep < 5 ~ "3 - 4",
+                                          category_rep > 4 ~ "5+")) %>%
+    group_by(reward_condition, stimulus_repetition, category_rep_group, age_group, subject_id) %>%
+    summarize(mean_correct = mean(correct_response_made, na.rm = T))  %>%
+    filter(stimulus_repetition == 1)
+
+correct_response_category_rep_sub$category_rep_group <- factor(correct_response_category_rep_sub$category_rep_group, levels = c("1 - 2", "3 - 4", "5+"))
+
+correct_response_category_rep <- correct_response_category_rep_sub %>%
+    group_by(reward_condition, stimulus_repetition, category_rep_group, age_group) %>%
+    summarize(mean_correct_group = mean(mean_correct, na.rm = T),
+              se_correct = sd(mean_correct, na.rm = T)/sqrt(n()))  %>%
+    filter(stimulus_repetition == 1)
+
+#plot
+correct_response_category_rep_plot <- ggplot() +
+    facet_grid(cols = vars(age_group)) +
+       geom_point(
+        data = correct_response_category_rep_sub,
+        aes(x = category_rep_group, color = reward_condition, y = mean_correct),
+        shape = 95,
+        size = 15,
+        alpha = .2
+    ) +
+    geom_point(
+        data = correct_response_category_rep,
+        aes(x = category_rep_group, y = mean_correct_group,
+        color = reward_condition),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = correct_response_category_rep,
+        aes(
+            x = category_rep_group,
+            y = mean_correct_group,
+            color = reward_condition,
+            ymin = mean_correct_group - se_correct,
+            ymax = mean_correct_group + se_correct),
+        width = .1
+    ) +
+    geom_line(
+        data = correct_response_category_rep,
+        aes(x = category_rep_group, y = mean_correct_group,
+        color = reward_condition, group = reward_condition),
+        linewidth = 1
+    ) +
+    xlab("Category Repetition") +
+    ylab("Correct Responses to 1st Stimulus") +
+        scale_color_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
+    geom_hline(yintercept = .33, linetype = "dashed") +
+    mem_theme  +
+    theme(legend.position = "top")
+correct_response_category_rep_plot
+```
+
+```{r plot generalization by block number lines,  fig.height=5}
+
+# determine correct responses as a function of stimulus rep and category rep
+correct_response_category_rep_sub <- learning_data %>%
+    filter(rt > 0) %>%
+    mutate(category_rep_group = case_when(category_rep < 3 ~ "1 - 2",
+                                          category_rep > 2 & category_rep < 5 ~ "3 - 4",
+                                          category_rep > 4 ~ "5+")) %>%
+    group_by(reward_condition, stimulus_repetition, category_rep_group, within_condition_block_num, subject_id) %>%
+    summarize(mean_correct = mean(correct_response_made, na.rm = T))  %>%
+    filter(stimulus_repetition == 1)
+
+correct_response_category_rep_sub$category_rep_group <- factor(correct_response_category_rep_sub$category_rep_group, levels = c("1 - 2", "3 - 4", "5+"))
+
+correct_response_category_rep <- correct_response_category_rep_sub %>%
+    group_by(reward_condition, stimulus_repetition, category_rep_group, within_condition_block_num) %>%
+    summarize(mean_correct_group = mean(mean_correct, na.rm = T),
+              se_correct = sd(mean_correct, na.rm = T)/sqrt(n()))  %>%
+    filter(stimulus_repetition == 1)
+
+
+#plot
+correct_response_category_rep_plot <- ggplot() +
+    facet_grid(cols = vars(within_condition_block_num)) +
+       geom_point(
+        data = correct_response_category_rep_sub,
+        aes(x = category_rep_group, color = reward_condition, y = mean_correct),
+        shape = 95,
+        size = 15,
+        alpha = .05
+    ) +
+    geom_point(
+        data = correct_response_category_rep,
+        aes(x = category_rep_group, y = mean_correct_group,
+        color = reward_condition),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = correct_response_category_rep,
+        aes(
+            x = category_rep_group,
+            y = mean_correct_group,
+            color = reward_condition,
+            ymin = mean_correct_group - se_correct,
+            ymax = mean_correct_group + se_correct),
+        width = .1
+    ) +
+    geom_line(
+        data = correct_response_category_rep,
+        aes(x = category_rep_group, y = mean_correct_group,
+        color = reward_condition, group = reward_condition),
+        linewidth = 1
+    ) +
+    xlab("Category Repetition") +
+    ylab("Correct Responses to 1st Stim.") +
+        scale_color_manual(values = c(color1, color2),
+                       name = "Block Condition") + 
+    geom_hline(yintercept = .5, linetype = "dashed") +
+    mem_theme  +
+    theme(legend.position = "top",
+          axis.text.x = element_text(angle = 52, hjust = 1))
+correct_response_category_rep_plot
+```
 
 ## Model: Correct response to first appearance of each stimulus
 ```{r fit generalization model}
@@ -702,7 +943,8 @@ beta_ests$reward_condition <- factor(beta_ests$block_condition,
 #find means to add to plot
 beta_means <- beta_ests %>%
     group_by(reward_condition, abstraction, age_group) %>%
-    summarize(mean_est = mean(est, na.rm = T))
+    summarize(mean_est = mean(est, na.rm = T),
+              se_est = se(est))
 
 #plot
 beta_histogram <- ggplot(beta_ests, aes(x = est)) +
@@ -725,14 +967,63 @@ beta_histogram
 #plot
 choice_weights_plot <- ggplot(beta_ests, aes(y = est, x = abstraction, fill = reward_condition)) +
     facet_grid(cols = vars(age_group)) + 
-    geom_boxplot() +
+    geom_boxplot(alpha = .5) +
     xlab("Choice Weight Magnitude") +
     ylab("Estimate") +
     scale_fill_manual(values = c(color1, color2), name = "Block Condition") +
     mem_theme +
     theme(legend.position = "top")
-choice_weights_plot
+choice_weights_plot 
 ```
+
+
+```{r choice weights lines fig, fig.height = 5, fig.width = 5}
+
+#plot
+choice_weights_lines_plot <- ggplot() +
+    facet_grid(cols = vars(age_group)) +
+       geom_point(
+        data = beta_ests,
+        aes(x = reward_condition, color = abstraction, y = est),
+        shape = 95,
+        size = 15,
+        alpha = .2
+    ) +
+    geom_point(
+        data = beta_means,
+        aes(x = reward_condition, 
+            y = mean_est,
+            color = abstraction),
+        size = 2
+    ) +
+    geom_errorbar(
+        data = beta_means,
+        aes(
+            x = reward_condition,
+            y = mean_est,
+            color = abstraction,
+            ymin = mean_est - se_est,
+            ymax = mean_est + se_est),
+        width = .1
+    ) +
+    geom_line(
+        data = beta_means,
+        aes(x = reward_condition, 
+            y = mean_est,
+            color = abstraction, 
+            group = abstraction),
+        linewidth = 1
+    ) +
+    xlab("Block Condition") +
+    ylab("Estimate") +
+        scale_color_manual(values = c(color1, color2),
+                       name = "Choice Weight") + 
+    mem_theme  +
+    theme(legend.position = "top",
+          axis.text.x = element_text(angle = 52, hjust = 1))
+choice_weights_lines_plot
+```
+
 
 ### Model: Choice weights by block condition and age group
 ```{r fit choice weight by age group model}
@@ -874,6 +1165,7 @@ beta_ests_wide_cat_pred$beta_e_scaled <- scale_this(beta_ests_wide_cat_pred$beta
 beta.tradoff.model.exemp_pred <- lm(beta_e_scaled ~ beta_c_scaled * age_scaled,
                            data = beta_ests_wide_exemp_pred)
 summary(beta.tradoff.model.exemp_pred)
+tab_model_glmer(beta.tradoff.model.exemp_pred)
 
 #marginal positive relation with beta_c_scaled
 #positive effect of age
@@ -882,6 +1174,7 @@ summary(beta.tradoff.model.exemp_pred)
 beta.tradoff.model.cat_pred <- lm(beta_e_scaled ~ beta_c_scaled * age_scaled,
                            data = beta_ests_wide_cat_pred)
 summary(beta.tradoff.model.cat_pred) 
+tab_model_glmer(beta.tradoff.model.cat_pred)
 
 #no relation with beta_c_scaled
 #positive relation with age
@@ -912,6 +1205,7 @@ beta_ests_points$beta_scaled <- scale_this(beta_ests_points$est)
 beta_points_model <- mixed(total_points ~ age_group * beta_scaled * abstraction * reward_condition + (1|subject_id),
                            data = beta_ests_points)
 beta_points_model
+tab_model_glmer(beta_points_model)
 
 # effects of 
 # age group
@@ -948,9 +1242,13 @@ beta_points_model3 <- lm(total_points ~ est, data = beta_ests_points_c_e)
 beta_points_model4 <- lm(total_points ~ est, data = beta_ests_points_e_e)
 
 summary(beta_points_model1) #sig
+tab_model_glmer(beta_points_model1)
 summary(beta_points_model2) #sig
+tab_model_glmer(beta_points_model2)
 summary(beta_points_model3) #not sig
+tab_model_glmer(beta_points_model3)
 summary(beta_points_model4) #sig
+tab_model_glmer(beta_points_model4)
 ```
 
 
